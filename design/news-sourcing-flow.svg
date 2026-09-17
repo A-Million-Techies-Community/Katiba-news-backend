@@ -1,0 +1,50 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1500" viewBox="0 0 1200 1500">
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#64748b"/></marker></defs>
+<rect width="1200" height="1500" fill="#f3f6fa"/>
+<rect width="1200" height="165" fill="#102a43"/>
+<g font-family="Segoe UI,Arial,sans-serif">
+<text x="60" y="48" fill="#64dfc0" font-size="16" font-weight="700" letter-spacing="3">KATIBA / NEWS SOURCING</text>
+<text x="60" y="96" fill="white" font-size="35" font-weight="700">Find leads. Organize sources. Hand off to people.</text>
+<text x="60" y="134" fill="#cbd5e1" font-size="18">Kenya Law first • Official supporting sources • Human editorial decisions</text>
+<text x="60" y="206" fill="#102a43" font-size="17" font-weight="700">AUTOMATED SOURCING</text>
+<rect x='60' y='230' width='730' height='120' rx='13' fill='#ffffff' stroke='#cbd5e1'/><circle cx='97' cy='266' r='21' fill='#102a43'/><text x='97' y='272' text-anchor='middle' fill='white' font-size='16' font-weight='700'>01</text><text x='133' y='265' fill='#102a43' font-size='20' font-weight='700'>OFFICIAL SOURCE REGISTRY</text><text x='133' y='297' fill='#334155' font-size='17'>Kenya Law first; Parliament and Judiciary support</text><text x='133' y='326' fill='#64748b' font-size='16'>Choose a supported access method for each source</text>
+<path d='M425,350 V381' stroke='#64748b' stroke-width='2' fill='none' marker-end='url(#a)'/>
+<rect x='60' y='387' width='730' height='120' rx='13' fill='#ffffff' stroke='#cbd5e1'/><circle cx='97' cy='423' r='21' fill='#102a43'/><text x='97' y='429' text-anchor='middle' fill='white' font-size='16' font-weight='700'>02</text><text x='133' y='422' fill='#102a43' font-size='20' font-weight='700'>CHECK FOR NEW ITEMS</text><text x='133' y='454' fill='#334155' font-size='17'>Scheduled checks through RSS, API, or permitted pages</text><text x='133' y='483' fill='#64748b' font-size='16'>Capture headline, original URL, excerpt, and timestamps</text>
+<path d='M425,507 V538' stroke='#64748b' stroke-width='2' fill='none' marker-end='url(#a)'/>
+<rect x='60' y='544' width='730' height='120' rx='13' fill='#ffffff' stroke='#cbd5e1'/><circle cx='97' cy='580' r='21' fill='#102a43'/><text x='97' y='586' text-anchor='middle' fill='white' font-size='16' font-weight='700'>03</text><text x='133' y='579' fill='#102a43' font-size='20' font-weight='700'>DETECT REPEATS + CHANGES</text><text x='133' y='611' fill='#334155' font-size='17'>Skip identical items; retain and flag meaningful updates</text><text x='133' y='640' fill='#64748b' font-size='16'>Group related coverage while preserving every source</text>
+<path d='M425,664 V695' stroke='#64748b' stroke-width='2' fill='none' marker-end='url(#a)'/>
+<rect x='60' y='701' width='730' height='120' rx='13' fill='#ffffff' stroke='#cbd5e1'/><circle cx='97' cy='737' r='21' fill='#102a43'/><text x='97' y='743' text-anchor='middle' fill='white' font-size='16' font-weight='700'>04</text><text x='133' y='736' fill='#102a43' font-size='20' font-weight='700'>SOURCE INBOX</text><text x='133' y='768' fill='#334155' font-size='17'>Fresh leads, updated items, topic tags, related links</text><text x='133' y='797' fill='#64748b' font-size='16'>Source material ready for editorial assessment</text>
+<path d='M425,821 V890' stroke='#64748b' stroke-width='2' fill='none' marker-end='url(#a)'/>
+<rect x='60' y='896' width='730' height='120' rx='13' fill='#e2f4ee' stroke='#cbd5e1'/><circle cx='97' cy='932' r='21' fill='#102a43'/><text x='97' y='938' text-anchor='middle' fill='white' font-size='16' font-weight='700'>05</text><text x='133' y='931' fill='#102a43' font-size='20' font-weight='700'>HUMAN EDITOR SELECTS</text><text x='133' y='963' fill='#334155' font-size='17'>Assess relevance, verify the lead, select or dismiss</text><text x='133' y='992' fill='#64748b' font-size='16'>Selected lead → source pack + brief + assigned author</text>
+<path d='M425,1016 V1047' stroke='#64748b' stroke-width='2' fill='none' marker-end='url(#a)'/>
+<rect x='60' y='1053' width='730' height='120' rx='13' fill='#e2f4ee' stroke='#cbd5e1'/><circle cx='97' cy='1089' r='21' fill='#102a43'/><text x='97' y='1095' text-anchor='middle' fill='white' font-size='16' font-weight='700'>06</text><text x='133' y='1088' fill='#102a43' font-size='20' font-weight='700'>HUMAN AUTHOR REPORTS</text><text x='133' y='1120' fill='#334155' font-size='17'>Investigate, corroborate, interview, and write</text><text x='133' y='1149' fill='#64748b' font-size='16'>Source links support original reporting</text>
+<path d='M425,1173 V1204' stroke='#64748b' stroke-width='2' fill='none' marker-end='url(#a)'/>
+<rect x='60' y='1210' width='730' height='120' rx='13' fill='#e2f4ee' stroke='#cbd5e1'/><circle cx='97' cy='1246' r='21' fill='#102a43'/><text x='97' y='1252' text-anchor='middle' fill='white' font-size='16' font-weight='700'>07</text><text x='133' y='1245' fill='#102a43' font-size='20' font-weight='700'>HUMAN EDITORIAL PROCESS</text><text x='133' y='1277' fill='#334155' font-size='17'>Author hands the article to the editor for review</text><text x='133' y='1306' fill='#64748b' font-size='16'>Article approval and publishing are outside sourcing</text>
+<text x="60" y="875" fill="#176b50" font-size="17" font-weight="700">HUMAN EDITORIAL WORK</text>
+<rect x="835" y="230" width="305" height="188" rx="13" fill="#e8eef6"/>
+<text x="855" y="261" font-size="16" font-weight="700" fill="#102a43">PRIMARY: KENYA LAW</text>
+<text x="855" y="291" font-size="17" fill="#334155">new.kenyalaw.org</text>
+<text x="855" y="320" font-size="15" fill="#334155">Gazettes / judgments / legislation</text>
+<text x="855" y="357" font-size="16" font-weight="700" fill="#102a43">SUPPORTING SOURCES</text>
+<text x="855" y="388" font-size="17" fill="#334155">Parliament / Judiciary</text><rect x="835" y="453" width="305" height="155" rx="13" fill="#e8eef6"/>
+<text x="855" y="487" font-size="18" font-weight="700" fill="#102a43">IF A CHECK FAILS</text>
+<text x="855" y="522" font-size="17" fill="#334155">Log error and retry with backoff.</text>
+<text x="855" y="553" font-size="17" fill="#334155">Alert on repeated failures.</text>
+<text x="855" y="584" font-size="17" fill="#334155">Other sources keep running.</text>
+<rect x="835" y="701" width="305" height="185" rx="13" fill="#fff1d6"/>
+<text x="855" y="735" font-size="18" font-weight="700" fill="#785211">THE SOURCE PACK</text>
+<text x="855" y="769" font-size="17" fill="#785211">Headline + original source link</text>
+<text x="855" y="799" font-size="17" fill="#785211">Excerpt + timestamps + tags</text>
+<text x="855" y="829" font-size="17" fill="#785211">Related reports + change history</text>
+<text x="855" y="859" font-size="17" fill="#785211">Editor brief added at assignment</text>
+<rect x="835" y="924" width="305" height="125" rx="13" fill="#e8eef6"/>
+<text x="855" y="958" font-size="18" font-weight="700" fill="#102a43">DISMISSED LEAD</text>
+<text x="855" y="992" font-size="17" fill="#334155">Archive with editor's reason.</text>
+<text x="855" y="1023" font-size="17" fill="#334155">No author assignment.</text>
+<path d="M790,982 H829" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#a)"/>
+<rect x="60" y="1372" width="1080" height="75" rx="13" fill="#102a43"/>
+<text x="84" y="1403" fill="#64dfc0" font-size="18" font-weight="700">WORKSTREAM OUTPUT: AN ORGANIZED SOURCE INBOX</text>
+<text x="84" y="1430" fill="white" font-size="17">The system gathers leads. Human editors choose them. Human authors report and write.</text>
+<text x="60" y="1480" fill="#64748b" font-size="14">Kenya Law → source inbox → human editor → human author → editorial review</text>
+</g></svg>
+
