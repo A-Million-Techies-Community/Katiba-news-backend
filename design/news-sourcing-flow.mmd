@@ -1,0 +1,47 @@
+﻿flowchart TD
+
+    %% 1. SOURCES
+    subgraph Sources["1. Official sources"]
+        KenyaLaw["PRIMARY: Kenya Law<br/>Gazettes, judgments, legislation"]
+        Parliament["SUPPORTING: Parliament<br/>Bills and parliamentary updates"]
+        Judiciary["SUPPORTING: Judiciary<br/>Court updates and decisions"]
+    end
+
+    %% 2. AUTOMATED SOURCING
+    subgraph Sourcing["2. Automated sourcing"]
+        Check["Check for new material"]
+        Capture["Save source details and original link"]
+        Compare{"New, updated, or unchanged?"}
+        Skip["Skip unchanged item"]
+        Organize["Tag topic and link related items"]
+        Inbox["Add to source inbox"]
+    end
+
+    %% 3. HUMAN EDITORIAL WORK
+    subgraph Editorial["3. Human editorial work"]
+        Editor{"Editor selects lead?"}
+        Archive["Archive dismissed lead"]
+        Assign["Editor assigns sources and brief"]
+        Author["Author researches and writes"]
+        Review["Editor reviews article"]
+    end
+
+    %% Sources feed the same collection process.
+    KenyaLaw --> Check
+    Parliament --> Check
+    Judiciary --> Check
+
+    %% Only new material and updates enter the inbox.
+    Check --> Capture
+    Capture --> Compare
+    Compare -->|New item| Organize
+    Compare -->|Updated: retain history| Organize
+    Compare -->|Unchanged| Skip
+    Organize --> Inbox
+
+    %% People select, report, write, and review.
+    Inbox --> Editor
+    Editor -->|Yes| Assign
+    Editor -->|No| Archive
+    Assign --> Author
+    Author --> Review
