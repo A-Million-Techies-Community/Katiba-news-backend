@@ -37,10 +37,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
+    
     'rest_framework',
     'apps.users.apps.UsersConfig',
+    'apps.news.apps.NewsConfig',  # Standardized to match their config file layout
+
+    # YOUR APPS: Explicitly using the full configuration classes
+    'apps.articles.apps.ArticlesConfig',
+    'apps.blogs.apps.BlogsConfig',
 ]
+
 
 
 REST_FRAMEWORK = {
