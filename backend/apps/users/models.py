@@ -8,7 +8,9 @@ class User(AbstractUser):
         AUTHOR = "AUTHOR", "Author"
         EDITOR = "EDITOR", "Editor"
 
+    auth_version = models.PositiveIntegerField(default=0, editable=False)
     email = models.EmailField(unique=True)
+    # Retained for migration compatibility only; never used for authorization.
     role = models.CharField(
         max_length=20,
         choices=Role.choices,
