@@ -135,3 +135,22 @@ MAILERS = {
     },
 }
 AUTH_USER_MODEL = 'users.User'
+# JWT rotation plus account-wide revocation for logout and password recovery.
+INSTALLED_APPS += ['rest_framework_simplejwt.token_blacklist']
+REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES'] = (
+    'apps.users.authentication.VersionedJWTAuthentication',
+)
+SIMPLE_JWT = {
+    'TOKEN_OBTAIN_SERIALIZER': 'apps.users.authentication.LoginSerializer',
+    'TOKEN_REFRESH_SERIALIZER': 'apps.users.authentication.RefreshSerializer',
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'CHECK_REVOKE_TOKEN': True,
+}
+# Development delivery only. Configure an email backend for deployed recovery.
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'no-reply@localhost'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+PASSWORD_RESET_TIMEOUT = 3600
+REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {'password_recovery': '10/hour'}

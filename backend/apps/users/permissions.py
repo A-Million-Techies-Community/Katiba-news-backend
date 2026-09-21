@@ -1,27 +1,18 @@
 from rest_framework.permissions import BasePermission
-
-from .models import User
+from .access import has_news_permission, eligible_author, READER
 
 
 class IsReader(BasePermission):
     def has_permission(self, request, view):
-        return (
-            request.user.is_authenticated
-            and request.user.role == User.Role.READER
-        )
+        user = request.user
+        return bool(user.is_authenticated and user.is_active and user.groups.filter(name=READER).exists())
 
 
 class IsAuthor(BasePermission):
     def has_permission(self, request, view):
-        return (
-            request.user.is_authenticated
-            and request.user.role == User.Role.AUTHOR
-        )
+        return bool(request.user.is_authenticated and eligible_author(request.user))
 
 
 class IsEditor(BasePermission):
     def has_permission(self, request, view):
-        return (
-            request.user.is_authenticated
-            and request.user.role == User.Role.EDITOR
-        )
+        return has_news_permission(request.user, 'review_lead')
