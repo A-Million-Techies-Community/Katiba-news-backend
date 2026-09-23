@@ -1,3 +1,4 @@
+"""Register the news feature with Django and set the admin display name."""
 from django.apps import AppConfig
 
 
