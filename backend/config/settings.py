@@ -11,6 +11,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions', 'django.contrib.messages', 'django.contrib.staticfiles',
     'rest_framework', 'rest_framework_simplejwt.token_blacklist',
     'apps.users.apps.UsersConfig', 'apps.news.apps.NewsConfig',
+    # Register your streamlined modules so Django can discover their data schemas
+    "apps.articles",
+    "apps.blogs",
 ]
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
