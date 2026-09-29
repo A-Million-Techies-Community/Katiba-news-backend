@@ -3,141 +3,141 @@ import React, { useState } from 'react';
 export const ArticleEditor: React.FC = () => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [category, setCategory] = useState('Constitution');
+  const [status, setStatus] = useState('draft');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiMessage, setApiMessage] = useState('');
 
-  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
+  async function handlePublishSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!title.trim() || !content.trim()) {
+      setApiMessage('Validation Error: Both title and document body text nodes are required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setApiMessage('');
+
+    try {
+      const sessionData = sessionStorage.getItem('katibaUserSession');
+      let accessToken = '';
+      if (sessionData) {
+        const parsed = JSON.parse(sessionData);
+        accessToken = parsed.access || '';
+      }
+
+      const response = await fetch('/api/articles/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
+        },
+        body: JSON.stringify({ title, content, status }),
+      });
+
+      await response.json();
+
+      if (!response.ok) {
+        setApiMessage('Access Blocked: Make sure you are signed in.');
+        return;
+      }
+
+      setApiMessage('Success: Article saved and synchronized cleanly with the Django database ledger!');
+      setTitle('');
+      setContent('');
+    } catch (error) {
+      setApiMessage('Network Failure: Cannot establish connection pipeline with the Django server.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
 
   return (
-    <div className="max-w-6xl mx-auto my-8 px-4 sm:px-6 font-sans">
+    <div style={{ maxWidth: '1200px', margin: '40px auto', padding: '0 20px', fontFamily: 'sans-serif', color: '#0f172a' }}>
       
-      {/* Editorial Header Panel */}
-      <div className="bg-slate-950 text-white rounded-xl p-6 sm:p-8 shadow-md mb-8 border border-slate-800">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <div className="inline-block px-2.5 py-0.5 rounded-sm bg-indigo-950 border border-indigo-800 text-indigo-400 text-[10px] font-bold tracking-wider uppercase mb-3">
-              Editorial Board Dashboard
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-              Draft Constitutional Updates
-            </h1>
-            <p className="text-slate-400 text-sm mt-1 max-w-xl leading-relaxed">
-              Compose precise legal guides and amendment records. Drafts are processed sequentially through validation queue frameworks.
-            </p>
-          </div>
-          
-          {/* Status Indicator */}
-          <div className="bg-slate-900 px-4 py-2.5 rounded border border-slate-800 self-start md:self-auto text-xs">
-            <span className="text-slate-400 block text-[10px] uppercase tracking-wider font-semibold">Workspace Status</span>
-            <span className="text-slate-200 font-medium">Ready to Sync</span>
-          </div>
+      {/* Premium Dark Header Banner */}
+      <div style={{ backgroundColor: '#020617', color: '#ffffff', borderRadius: '16px', padding: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', border: '1px solid #1e293b' }}>
+        <div>
+          <div style={{ fontSize: '10px', fontWeight: 'bold', letterSpacing: '2px', color: '#94a3b8', textTransform: 'uppercase', marginBottom: '6px', fontFamily: 'monospace' }}>Editorial Board Dashboard / Creator Space</div>
+          <h1 style={{ fontSize: '26px', fontWeight: 'bold', margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>Constitutional Manuscript Composer</h1>
+          <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0, lineHeight: '1.5' }}>Draft precise civic guides, structural legal breakdowns, and institutional models. All modifications are compiled and tracked via the system's ledger.</p>
         </div>
       </div>
 
-      {/* Workspace Grid Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      {/* Main Structural Twin-Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px' }}>
         
-        {/* LEFT COLUMN: Input Form Controls */}
-        <div className="lg:col-span-7 bg-white rounded-xl border border-slate-200 shadow-xs p-6 space-y-6">
-          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-3">
-            Document Composer
-          </h2>
-
-          {/* Title Field */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Article Title</label>
-              <span className="text-[11px] text-slate-400 font-medium">{title.length}/100 characters</span>
-            </div>
+        {/* Left Side: Document Inputs Panel */}
+        <form onSubmit={handlePublishSubmit} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <h2 style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#0f172a', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', margin: 0, fontFamily: 'monospace' }}>Document Input Controls</h2>
+          
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#475569', marginBottom: '8px' }}>Document Title</label>
             <input 
               type="text" 
-              maxLength={100}
-              placeholder="Enter comprehensive article header text..." 
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 font-medium transition duration-150 focus:outline-hidden focus:bg-white focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 text-sm"
+              placeholder="Enter precise legislative or educational text title..."
+              style={{ width: '100%', padding: '14px', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: '14px', boxSizing: 'border-box', backgroundColor: '#f8fafc' }}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
           </div>
 
-          {/* Category Dropdown Selection */}
-          <div className="space-y-2">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">Legal Category</label>
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#475569', marginBottom: '8px' }}>Workflow Processing Route</label>
             <select 
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg font-medium text-slate-700 transition duration-150 focus:outline-hidden focus:bg-white focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 text-sm cursor-pointer"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              style={{ width: '100%', padding: '14px', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: '14px', boxSizing: 'border-box', backgroundColor: '#f8fafc', fontWeight: '500' }}
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
             >
-              <option value="Constitution">Constitution Amendments</option>
-              <option value="Land Act">Land and Property Acts</option>
-              <option value="Civic Rights">Civic Space and Rights</option>
-              <option value="Judiciary">Judiciary Reports</option>
+              <option value="draft">Save to Internal System App Drafts Gallery</option>
+              <option value="published">Deploy Immediately to Public Live Ledger</option>
             </select>
           </div>
 
-          {/* Content Body Markdown Editor */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Content Body</label>
-              <span className="px-2 py-0.5 rounded-sm bg-slate-100 text-slate-500 font-mono text-[9px] font-bold tracking-wider">
-                RAW MARKDOWN ENGINE
-              </span>
-            </div>
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', textTransform: 'uppercase', color: '#475569', marginBottom: '8px' }}>Manuscript Content Body</label>
             <textarea 
-              placeholder="Write text body content utilizing structural markup syntax formatting rules..." 
-              rows={12} 
-              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-lg font-mono text-sm text-slate-800 placeholder-slate-400 transition duration-150 focus:outline-hidden focus:bg-white focus:ring-1 focus:ring-indigo-600 focus:border-indigo-600 resize-y leading-relaxed"
+              placeholder="Inject legal articles text, explanatory analysis sections, and constitutional definitions blocks..."
+              rows={12}
+              style={{ width: '100%', padding: '16px', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: '15px', boxSizing: 'border-box', backgroundColor: '#f8fafc', resize: 'none', lineHeight: '1.6', fontFamily: 'serif' }}
               value={content}
               onChange={(e) => setContent(e.target.value)}
             />
-            <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-              <span>Standard line breaks produce individual paragraph runs.</span>
-              <span className="font-medium text-slate-500">{wordCount} words registered</span>
-            </div>
           </div>
 
-          {/* Submission Area */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4">
-            <span className="text-xs text-slate-400 max-w-xs leading-snug">
-              Draft payloads undergo administrative validation prior to live record database serialization.
-            </span>
-            <button className="bg-indigo-600 text-white px-5 py-2.5 rounded-lg font-semibold text-sm hover:bg-indigo-700 transition-all duration-150 cursor-pointer shadow-xs">
-              Submit Draft
+          {apiMessage && (
+            <div style={{ padding: '14px', borderRadius: '10px', fontSize: '13px', fontWeight: '500', backgroundColor: apiMessage.startsWith('Success') ? '#f0fdf4' : '#fef2f2', color: apiMessage.startsWith('Success') ? '#166534' : '#991b1b', border: apiMessage.startsWith('Success') ? '1px solid #bbf7d0' : '1px solid #fecaca' }}>
+              {apiMessage}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '20px', marginTop: '8px', flexWrap: 'wrap', gap: '16px' }}>
+            <span style={{ fontSize: '11px', color: '#64748b', maxWidth: '300px', lineHeight: '1.4' }}>Submitting updates validates operational parameters and indexes information inside the group ledger.</span>
+            <button type="submit" disabled={isSubmitting} style={{ backgroundColor: '#0f172a', color: '#ffffff', border: 'none', padding: '14px 28px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', cursor: 'pointer', opacity: isSubmitting ? 0.5 : 1, fontFamily: 'monospace' }}>
+              {isSubmitting ? 'Syncing...' : 'Commit Manuscript'}
             </button>
           </div>
-        </div>
+        </form>
 
-        {/* RIGHT COLUMN: Live View Preview */}
-        <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-6">
-          <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-1">
-            Live Preview Canvas
+        {/* Right Side: Professional Live Preview Monitor */}
+        <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '32px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#64748b', margin: 0, fontFamily: 'monospace' }}>Live Preview Monitor</h2>
+            <span style={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', padding: '4px 8px', borderRadius: '4px', backgroundColor: status === 'published' ? '#f0fdf4' : '#fff9db', color: status === 'published' ? '#166534' : '#b58900', border: '1px solid currentColor', fontFamily: 'monospace' }}>
+              Target: {status === 'published' ? 'Live Channel' : 'Draft Layer'}
+            </span>
           </div>
-          
-          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-xs min-h-[460px] flex flex-col">
-            {title ? (
-              <h1 className="text-2xl font-bold text-slate-900 tracking-tight leading-tight mb-3">
-                {title}
-              </h1>
-            ) : (
-              <h1 className="text-2xl font-medium text-slate-300 tracking-tight leading-tight mb-3 italic">
-                Untitled Document
-              </h1>
-            )}
 
-            {/* Micro Metadata Metrics */}
-            <div className="flex items-center gap-2 text-[10px] font-bold text-indigo-700 bg-indigo-50 w-fit px-2 py-0.5 rounded-xs mb-6 border border-indigo-100 uppercase tracking-wider">
-              Category: {category}
+          <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', padding: '28px', minHeight: '400px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+            <div>
+              <div style={{ fontSize: '9px', color: '#94a3b8', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px', fontFamily: 'monospace' }}>Verification Ledger Node / Canvas Preview</div>
+              <h3 style={{ fontSize: '22px', fontWeight: 'bold', color: title ? '#0f172a' : '#cbd5e1', margin: '0 0 16px 0', lineHeight: '1.3' }}>{title || 'Untitled Document Entry'}</h3>
+              <p style={{ fontSize: '16px', color: content ? '#334155' : '#cbd5e1', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-wrap', fontStyle: content ? 'normal' : 'italic', fontFamily: 'serif' }}>
+                {content || 'Begin typing document metrics and textual clauses inside the composer layout configuration dashboard workspace on the left hand panel to observe real-time formatting layouts here...'}
+              </p>
             </div>
-
-            {/* Document Render Body Text */}
-            <div className="text-slate-800 text-sm sm:text-base leading-relaxed space-y-4 flex-1 border-t border-slate-100 pt-4 font-serif">
-              {content ? (
-                <p className="whitespace-pre-wrap">{content}</p>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center text-slate-300 py-12">
-                  <p className="text-xs font-sans italic max-w-xs">
-                    Awaiting manuscript inputs to generate public document presentation fields.
-                  </p>
-                </div>
-              )}
+            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '14px', display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace' }}>
+              <span>Author identity: Dida (You)</span>
+              <span>Layout Status: Checked</span>
             </div>
           </div>
         </div>

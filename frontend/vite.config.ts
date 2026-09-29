@@ -16,3 +16,5 @@ export default defineConfig({
     },
   },
 })
+// Add this directory matcher path inside your style config rules array:
+"./src/features/**/*.{js,ts,jsx,tsx}"
