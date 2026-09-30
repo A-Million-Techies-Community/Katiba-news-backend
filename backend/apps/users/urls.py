@@ -3,10 +3,9 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .views import (
-    AuthorOnlyView,
-    EditorOnlyView,
+    AuthorDashboardView,
+    AuthorProfileView,
     MeView,
-    ReaderOnlyView,
     RegisterView,
 )
 
@@ -28,18 +27,18 @@ urlpatterns = [
         name="me",
     ),
     path(
-        "reader/",
-        ReaderOnlyView.as_view(),
-        name="reader",
+        "author/profile/",
+        AuthorProfileView.as_view(),
+        name="author-profile",
+    ),
+    path(
+        "author/dashboard/",
+        AuthorDashboardView.as_view(),
+        name="author-dashboard",
     ),
     path(
         "author/",
-        AuthorOnlyView.as_view(),
+        AuthorDashboardView.as_view(),
         name="author",
-    ),
-    path(
-        "editor/",
-        EditorOnlyView.as_view(),
-        name="editor",
     ),
 ]
