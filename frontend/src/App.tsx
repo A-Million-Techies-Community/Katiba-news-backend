@@ -434,6 +434,7 @@ function App() {
           </label>
 
                     <div className="header-actions">
+            <a className="header-signin" href="/news/dashboard">News dashboard</a>
             {signedInUser && (
   <span className="signed-in-label">
     {signedInUser.username} · {signedInUser.role}
