@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import NewsImage from './NewsImage'
-import { uploadImage } from './api'
-import type { UploadedImage } from './api'
+import { uploadImage } from '../api'
+import type { UploadedImage } from '../api'
 
 /** Upload and describe the featured image without changing the story until Save. */
 export default function FeaturedImage({ image, alt, caption, editable, onImage, onAlt, onCaption, onBusy }: {

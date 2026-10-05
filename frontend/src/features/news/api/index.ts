@@ -32,3 +32,16 @@ export async function uploadImage(file: File): Promise<UploadedImage> {
   form.append('file', file)
   return api<UploadedImage>('/api/news/images/', 'POST', form)
 }
+
+/** Collect paginated results through the frontend proxy. */
+export async function all<T>(path: string): Promise<T[]> {
+  const items: T[] = []
+  let next: string | null = path
+  while (next) {
+    const page: { results: T[]; next: string | null } = await api(next)
+    items.push(...page.results)
+    const url: URL | null = page.next ? new URL(page.next, window.location.origin) : null
+    next = url ? url.pathname + url.search : null
+  }
+  return items
+}
