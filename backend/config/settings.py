@@ -1,4 +1,5 @@
 """Settings for the Katiba News backend."""
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -57,6 +58,9 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'CHECK_REVOKE_TOKEN': True,
+        'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
+
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=14),
 }
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'no-reply@localhost'
