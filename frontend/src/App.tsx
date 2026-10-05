@@ -177,8 +177,14 @@ const navigate = (nextView: View, path?: string) => {
 
   if (nextPath === '/signup') {
     setMode('signup')
+    setJourneyStage(1)
   } else if (nextPath === '/signin') {
     setMode('signin')
+    setJourneyStage(1)
+  } else if (nextPath === '/author/complete-profile') {
+    setJourneyStage((current) => (current === 3 ? 3 : 2))
+  } else if (nextPath === '/author/dashboard') {
+    setJourneyStage(4)
   }
 }
 useEffect(() => {
@@ -187,6 +193,14 @@ useEffect(() => {
 
     setView(pathToView(path))
     setMode(path === '/signup' ? 'signup' : 'signin')
+    if (path === '/signup' || path === '/signin') {
+      setJourneyStage(1)
+    } else if (path === '/author/complete-profile') {
+      setJourneyStage(2)
+      setOnboardingStep(1)
+    } else if (path === '/author/dashboard') {
+      setJourneyStage(4)
+    }
   }
 
   window.addEventListener('popstate', handlePopState)
@@ -198,7 +212,6 @@ useEffect(() => {
   const [mode, setMode] = useState<Mode>(() =>
   window.location.pathname === '/signup' ? 'signup' : 'signin',
 )
-  const [role, setRole] = useState<Role>('Author')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
@@ -239,7 +252,11 @@ const [conflictsOfInterest, setConflictsOfInterest] = useState('')
 const [editorialStandardsAgreement, setEditorialStandardsAgreement] = useState(false)
 const [additionalInformation, setAdditionalInformation] = useState('')
 const [onboardingStep, setOnboardingStep] = useState(1)
-const totalOnboardingSteps = 6
+  const totalOnboardingSteps = 6
+  const [journeyStage, setJourneyStage] = useState(1)
+  const [verificationFiles, setVerificationFiles] = useState<string[]>([])
+  const [verificationArticles, setVerificationArticles] = useState('')
+  const [verificationMotivation, setVerificationMotivation] = useState('')
 
 const nextOnboardingStep = () => {
   setOnboardingStep((step) =>
@@ -310,7 +327,6 @@ const [message, setMessage] = useState('')
 
       setMessage('Author account created. Sign in to complete your profile.')
       setMode('signin')
-      setRole('Author')
       setPassword('')
       return
     }
@@ -351,12 +367,14 @@ const [message, setMessage] = useState('')
       role: 'Author',
     })
     setPassword('')
-navigate(
-  account.profile_complete ? 'dashboard' : 'onboarding',
-  account.profile_complete
-    ? '/author/dashboard'
-    : '/author/complete-profile',
-)  } catch {
+if (account.profile_complete) {
+      setJourneyStage(4)
+      navigate('dashboard', '/author/dashboard')
+    } else {
+      setJourneyStage(2)
+      setOnboardingStep(1)
+      navigate('onboarding', '/author/complete-profile')
+    }  } catch {
     setMessage('Could not reach the server. Check that Django is running.')
   } finally {
     setBusy(false)
@@ -450,6 +468,13 @@ if (!savedSession) {
   }
 }
 
+  function handleVerificationSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setMessage('')
+    setJourneyStage(4)
+    navigate('dashboard', '/author/dashboard')
+  }
+
   function openAuth(nextMode: Mode = 'signin') {
   setMode(nextMode)
   setMessage('')
@@ -461,619 +486,1094 @@ if (!savedSession) {
   }
 }
 
-  if (view === 'onboarding') {
-  return (
-    <main className="auth-page">
-      <header className="site-header">
-        <button
-          className="brand"
-          type="button"
-          onClick={() => navigate('home', '/')}
-        >
-          Katiba News
-        </button>
-        <button
-          className="back-home"
-          type="button"
-          onClick={() => navigate('home', '/')}
-        >
-          Back to news
-        </button>
-      </header>
+  if (view === 'auth') {
+    const isSignup = mode === 'signup'
+    const stage = 1
 
-      <section className="welcome">
-        <div className="intro">
-          <p className="eyebrow">AUTHOR REGISTRATION</p>
-          <h1>
-            Tell us about
-            <br />
-            your <em>work.</em>
-          </h1>
-          <p className="intro-copy">
-            Complete this short profile to access your Author dashboard.
-          </p>
-        </div>
-
-        <form className="login-card" onSubmit={handleAuthorProfileSubmit}>
-  <p className="eyebrow">YOUR AUTHOR PROFILE</p>
-  <h2>Complete registration</h2>
-  <p className="hint">
-    These details help us understand your writing experience and interests.
-  </p>
-
-  <div className="onboarding-progress">
-    <span>
-      Page {onboardingStep} of {totalOnboardingSteps}
-    </span>
-
-    <div className="progress-track">
-      <div
-        className="progress-bar"
-        style={{
-          width: `${(onboardingStep / totalOnboardingSteps) * 100}%`,
-        }}
-      />
-    </div>
-  </div>
-{onboardingStep === 1 && (
-  <>
-          <label htmlFor="professionalTitle">Professional title</label>
-          <input
-            id="professionalTitle"
-            value={professionalTitle}
-            onChange={(event) => setProfessionalTitle(event.target.value)}
-            placeholder="For example: Freelance journalist"
-            required
-          />
-
-          <label htmlFor="organisation">Organisation</label>
-          <input
-            id="organisation"
-            value={organisation}
-            onChange={(event) => setOrganisation(event.target.value)}
-            placeholder="Optional"
-          />
-
-          <label htmlFor="location">Location</label>
-          <input
-            id="location"
-            value={location}
-            onChange={(event) => setLocation(event.target.value)}
-            placeholder="For example: Nairobi, Kenya"
-            required
-          />
-
-          <label htmlFor="areasOfExpertise">Areas of expertise</label>
-          <input
-            id="areasOfExpertise"
-            value={areasOfExpertise}
-            onChange={(event) => setAreasOfExpertise(event.target.value)}
-            placeholder="For example: Governance, public finance"
-            required
-          />
-
-          <label htmlFor="biography">Short biography</label>
-          <textarea
-            id="biography"
-            value={biography}
-            onChange={(event) => setBiography(event.target.value)}
-            placeholder="Tell us about your writing experience and interests."
-            rows={5}
-            required
-          />
-          <label htmlFor="preferredByline">Preferred author/byline name</label>
-<input
-  id="preferredByline"
-  value={preferredByline}
-  onChange={(event) => setPreferredByline(event.target.value)}
-  placeholder="How should your name appear on published articles?"
-/>
-
-<label htmlFor="phoneNumber">Phone number</label>
-<input
-  id="phoneNumber"
-  value={phoneNumber}
-  onChange={(event) => setPhoneNumber(event.target.value)}
-  placeholder="For example: +254 7XX XXX XXX"
-/>
-    </>
-)}
-{onboardingStep === 2 && (
-  <>
-<label htmlFor="yearsOfExperience">Years of writing or journalism experience</label>
-<input
-  id="yearsOfExperience"
-  value={yearsOfExperience}
-  onChange={(event) => setYearsOfExperience(event.target.value)}
-  placeholder="For example: 5 years"
-/>
-
-<label htmlFor="highestEducation">Highest level of education</label>
-<input
-  id="highestEducation"
-  value={highestEducation}
-  onChange={(event) => setHighestEducation(event.target.value)}
-  placeholder="For example: Bachelor's degree in Journalism"
-/>
-
-<label htmlFor="journalismTraining">Journalism or media training</label>
-<textarea
-  id="journalismTraining"
-  value={journalismTraining}
-  onChange={(event) => setJournalismTraining(event.target.value)}
-  placeholder="Describe any journalism, media, or communication training."
-  rows={4}
-/>
-
-<label htmlFor="previousMediaExperience">
-  Previous newsroom or media experience
-</label>
-<textarea
-  id="previousMediaExperience"
-  value={previousMediaExperience}
-  onChange={(event) => setPreviousMediaExperience(event.target.value)}
-  placeholder="Describe organizations, publications, stations, or platforms you have worked with."
-  rows={4}
-/>
-  </>
-)}
-
-{onboardingStep === 3 && (
-  <>
-    <label htmlFor="portfolioUrl">
-      Portfolio / personal website
-    </label>
-    <input
-      id="portfolioUrl"
-      type="url"
-      value={portfolioUrl}
-      onChange={(event) => setPortfolioUrl(event.target.value)}
-      placeholder="https://example.com"
-    />
-
-    <label htmlFor="linkedinUrl">
-      LinkedIn or professional profile
-    </label>
-    <input
-      id="linkedinUrl"
-      type="url"
-      value={linkedinUrl}
-      onChange={(event) => setLinkedinUrl(event.target.value)}
-      placeholder="https://linkedin.com/in/yourname"
-    />
-
-    <label htmlFor="publishedWork">
-      Published work / writing samples
-    </label>
-    <textarea
-      id="publishedWork"
-      value={publishedWork}
-      onChange={(event) => setPublishedWork(event.target.value)}
-      placeholder="Paste links to your published articles or writing samples."
-      rows={7}
-    />
-  </>
-)}
-
-{onboardingStep === 4 && (
-  <>
-    <label htmlFor="areasOfExpertise">
-      Areas of expertise
-    </label>
-    <input
-      id="areasOfExpertise"
-      value={areasOfExpertise}
-      onChange={(event) => setAreasOfExpertise(event.target.value)}
-      placeholder="For example: Governance, public finance"
-      required
-    />
-
-    <label htmlFor="primaryExpertise">
-      Primary area of expertise
-    </label>
-    <input
-      id="primaryExpertise"
-      value={primaryExpertise}
-      onChange={(event) => setPrimaryExpertise(event.target.value)}
-      placeholder="For example: Governance"
-      required
-    />
-
-    <label htmlFor="secondaryExpertise">
-      Secondary areas of expertise
-    </label>
-    <input
-      id="secondaryExpertise"
-      value={secondaryExpertise}
-      onChange={(event) => setSecondaryExpertise(event.target.value)}
-      placeholder="For example: Public finance, elections, law"
-    />
-
-    <label htmlFor="reportingBeats">
-      Main reporting beats
-    </label>
-    <input
-      id="reportingBeats"
-      value={reportingBeats}
-      onChange={(event) => setReportingBeats(event.target.value)}
-      placeholder="For example: Politics, business, health"
-      required
-    />
-
-    <label htmlFor="contentTypes">
-      Types of content you produce
-    </label>
-    <input
-      id="contentTypes"
-      value={contentTypes}
-      onChange={(event) => setContentTypes(event.target.value)}
-      placeholder="For example: News, analysis, interviews"
-    />
-
-    <label htmlFor="languages">
-      Languages you write or report in
-    </label>
-    <input
-      id="languages"
-      value={languages}
-      onChange={(event) => setLanguages(event.target.value)}
-      placeholder="For example: English, Kiswahili"
-      required
-    />
-
-    <label htmlFor="geographicCoverage">
-      Geographic areas you cover
-    </label>
-    <input
-      id="geographicCoverage"
-      value={geographicCoverage}
-      onChange={(event) => setGeographicCoverage(event.target.value)}
-      placeholder="For example: Kenya, East Africa"
-    />
-  </>
-)}
-
-{onboardingStep === 5 && (
-  <>
-    <label htmlFor="writingExperience">
-      Describe your writing experience
-    </label>
-    <textarea
-      id="writingExperience"
-      value={writingExperience}
-      onChange={(event) => setWritingExperience(event.target.value)}
-      placeholder="Tell us about your writing style, experience, and areas of work."
-      rows={6}
-      required
-    />
-
-    <label htmlFor="investigativeExperience">
-      Investigative journalism experience
-    </label>
-    <textarea
-      id="investigativeExperience"
-      value={investigativeExperience}
-      onChange={(event) =>
-        setInvestigativeExperience(event.target.value)
-      }
-      placeholder="Describe any investigative reporting experience."
-      rows={5}
-    />
-
-    <label htmlFor="factCheckingExperience">
-      Fact-checking experience
-    </label>
-    <textarea
-      id="factCheckingExperience"
-      value={factCheckingExperience}
-      onChange={(event) =>
-        setFactCheckingExperience(event.target.value)
-      }
-      placeholder="Describe your experience checking facts and claims."
-      rows={5}
-    />
-
-    <label htmlFor="sourceVerificationExperience">
-      Source verification experience
-    </label>
-    <textarea
-      id="sourceVerificationExperience"
-      value={sourceVerificationExperience}
-      onChange={(event) =>
-        setSourceVerificationExperience(event.target.value)
-      }
-      placeholder="How do you verify sources, documents, quotations, and information?"
-      rows={5}
-    />
-  </>
-)}
-
-{onboardingStep === 6 && (
-  <>
-    <label htmlFor="topicsOfInterest">
-      Topics you would like to cover for Katiba News
-    </label>
-    <textarea
-      id="topicsOfInterest"
-      value={topicsOfInterest}
-      onChange={(event) => setTopicsOfInterest(event.target.value)}
-      placeholder="Tell us the subjects and issues you would like to report on."
-      rows={6}
-      required
-    />
-
-    <label htmlFor="motivationToJoin">
-      Why would you like to write for Katiba News?
-    </label>
-    <textarea
-      id="motivationToJoin"
-      value={motivationToJoin}
-      onChange={(event) => setMotivationToJoin(event.target.value)}
-      placeholder="Tell us why you want to contribute to Katiba News."
-      rows={6}
-      required
-    />
-
-    <label htmlFor="conflictsOfInterest">
-      Professional conflicts of interest
-    </label>
-    <textarea
-      id="conflictsOfInterest"
-      value={conflictsOfInterest}
-      onChange={(event) => setConflictsOfInterest(event.target.value)}
-      placeholder="Tell us about any professional, financial, organizational, or other conflicts. Write 'None' where applicable."
-      rows={5}
-    />
-
-    <label className="checkbox-row">
-      <input
-        type="checkbox"
-        checked={editorialStandardsAgreement}
-        onChange={(event) =>
-          setEditorialStandardsAgreement(event.target.checked)
-        }
-        required
-      />
-      <span>
-        I agree to follow Katiba News editorial, accuracy, and
-        fact-checking standards.
-      </span>
-    </label>
-
-    <label htmlFor="additionalInformation">
-      Anything else you would like the editorial team to know?
-    </label>
-    <textarea
-      id="additionalInformation"
-      value={additionalInformation}
-      onChange={(event) =>
-        setAdditionalInformation(event.target.value)
-      }
-      placeholder="Add any other information that may help the editorial team."
-      rows={5}
-    />
-  </>
-)}
-
- <div className="onboarding-actions">
-  {onboardingStep > 1 && (
-    <button
-      type="button"
-      className="secondary-action"
-      onClick={previousOnboardingStep}
-    >
-      ← Back
-    </button>
-  )}
-
-  {onboardingStep < totalOnboardingSteps ? (
-    <button
-      type="button"
-      className="submit"
-      onClick={nextOnboardingStep}
-    >
-      Next →
-    </button>
-  ) : (
-    <button
-      className="submit"
-      type="submit"
-      disabled={busy}
-    >
-      {busy ? 'Saving…' : 'Complete registration'}
-    </button>
-  )}
-</div>
-
-          {message && <p className="message" role="status">{message}</p>}
-        </form>
-      </section>
-
-      <footer className="auth-footer">Katiba News Authors</footer>
-    </main>
-  )
-}
-
-if (view === 'dashboard') {
-  return (
-    <main className="auth-page">
-      <header className="site-header">
-        <button
-          className="brand"
-          type="button"
-          onClick={() => navigate('home', '/')}
-        >
-          Katiba News
-        </button>
-        <button
-          className="back-home"
-          type="button"
-          onClick={() => navigate('home', '/')}
-        >
-          Back to news
-        </button>
-      </header>
-
-      <section className="welcome">
-        <div className="intro">
-          <p className="eyebrow">AUTHOR DASHBOARD</p>
-          <h1>
-            Your voice
-            <br />
-            matters <em>here.</em>
-          </h1>
-          <p className="intro-copy">
-            Use your author space to prepare articles and contribute to the public conversation.
-          </p>
-        </div>
-
-        <section className="login-card">
-          <p className="eyebrow">WELCOME BACK</p>
-          <h2>{signedInUser?.username || 'Author'}</h2>
-          <p className="hint">Your author profile is complete.</p>
-
-          <div className="dashboard-summary">
-            <div>
-              <strong>Profile</strong>
-              <span>Complete</span>
-            </div>
-            <div>
-              <strong>Workspace</strong>
-              <span>Ready for your next article</span>
-            </div>
-          </div>
-
+    return (
+      <main className="author-journey-page">
+        <header className="journey-header">
           <button
-            className="submit"
+            className="journey-logo"
             type="button"
             onClick={() => navigate('home', '/')}
           >
-            Go to author tools
+            <strong>Katiba News</strong>
+            <span>Real Stories. Stronger Democracy.</span>
           </button>
-        </section>
-      </section>
 
-      <footer className="auth-footer">Katiba News Authors</footer>
-    </main>
-  )
-}
-  if (view === 'auth') {
-    return (
-      <main className="auth-page">
-        <header className="site-header">
-          <button className="brand" type="button" onClick={() => navigate('home', '/')}>
-            Katiba News
-          </button>
-          <button className="back-home" type="button" onClick={() => navigate('home', '/')}>
+          <div className="journey-header-copy">
+            <span></span>
+            <strong>Create Your Account</strong>
+            <small>Start your journey from sign up to publication.</small>
+          </div>
+
+          <button
+            className="journey-back"
+            type="button"
+            onClick={() => navigate('home', '/')}
+          >
             Back to news
           </button>
         </header>
 
-        <section className="welcome">
-          <div className="intro">
-            <p className="eyebrow">THE NEWSROOM, CONNECTED</p>
-            <h1>Stories that shape<br />our <em>future.</em></h1>
-            <p className="intro-copy">
-              Thoughtful reporting on the ideas, people, and decisions shaping Kenya.
-            </p>
+        <section className="journey-body">
+          <div className="journey-progress">
+            <div className="journey-progress-label">
+              <span>Step {stage} of 5</span>
+              <strong>01 · Create Account</strong>
+            </div>
+            <div className="journey-progress-track" aria-hidden="true">
+              <span
+                className="journey-progress-fill"
+                style={{ width: '20%' }}
+              />
+            </div>
           </div>
 
-          <form className="login-card" onSubmit={handleSubmit}>
-            <p className="eyebrow">YOUR NEWSROOM</p>
-            <h2>{mode === 'signin' ? 'Welcome back' : 'Create an account'}</h2>
-            <p className="hint">
-              {mode === 'signin'
-                ? 'Sign in to complete your author profile or open your dashboard.'
-                : 'Create your Author account to get started.'}
-            </p>
+          <div className="account-stage">
+            <div className="account-stage-copy">
+              <span className="stage-kicker">STEP 1 · CREATE ACCOUNT</span>
+              <h1>
+                Join Katiba News
+                <br />
+                as an <em>Author.</em>
+              </h1>
+              <p>
+                Create your account to begin your author journey. Your profile,
+                work samples, and future pitches will live in one place.
+              </p>
 
-            <div className="role-options" aria-label="Choose sign-in or sign-up">
-              <button
-                type="button"
-                className={mode === 'signin' ? 'role selected' : 'role'}
-                onClick={() => {
-                  setMode('signin')
-                  setMessage('')
-                }}
-              >
-                Sign in
-              </button>
-              <button
-                type="button"
-                className={mode === 'signup' ? 'role selected' : 'role'}
-                onClick={() => {
-                  setMode('signup')
-                  setMessage('')
-                }}
-              >
-                Sign up
-              </button>
+              <div className="journey-mini-flow">
+                <span className="active">Create account</span>
+                <i>→</i>
+                <span>Complete profile</span>
+                <i>→</i>
+                <span>Submit work</span>
+                <i>→</i>
+                <span>Dashboard</span>
+              </div>
             </div>
 
+            <form className="account-form" onSubmit={handleSubmit}>
+              <div className="account-form-heading">
+                <span>KATIBA NEWS</span>
+                <h2>{isSignup ? 'Sign Up' : 'Welcome back'}</h2>
+                <p>
+                  {isSignup
+                    ? 'Join Katiba News as an Author.'
+                    : 'Sign in to continue your author journey.'}
+                </p>
+              </div>
 
+              <div className="account-mode">
+                <button
+                  type="button"
+                  className={isSignup ? 'active' : ''}
+                  onClick={() => {
+                    setMode('signup')
+                    setMessage('')
+                  }}
+                >
+                  Create account
+                </button>
+                <button
+                  type="button"
+                  className={!isSignup ? 'active' : ''}
+                  onClick={() => {
+                    setMode('signin')
+                    setMessage('')
+                  }}
+                >
+                  Sign in
+                </button>
+              </div>
 
-            {mode === 'signup' && (
-              <>
-                <label htmlFor="firstName">First name</label>
-                <input
-                  id="firstName"
-                  value={firstName}
-                  onChange={(event) => setFirstName(event.target.value)}
-                  autoComplete="given-name"
-                  required
-                />
-                <label htmlFor="lastName">Last name</label>
-                <input
-                  id="lastName"
-                  value={lastName}
-                  onChange={(event) => setLastName(event.target.value)}
-                  autoComplete="family-name"
-                  required
-                />
-                <label htmlFor="email">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  autoComplete="email"
-                  required
-                />
-              </>
-            )}
+              {isSignup && (
+                <>
+                  <label htmlFor="firstName">First name</label>
+                  <input
+                    id="firstName"
+                    value={firstName}
+                    onChange={(event) => setFirstName(event.target.value)}
+                    autoComplete="given-name"
+                    required
+                  />
 
-            <label htmlFor="username">Username</label>
-            <input
-              id="username"
-              value={username}
-              onChange={(event) => setUsername(event.target.value)}
-              autoComplete="username"
-              required
-            />
+                  <label htmlFor="lastName">Last name</label>
+                  <input
+                    id="lastName"
+                    value={lastName}
+                    onChange={(event) => setLastName(event.target.value)}
+                    autoComplete="family-name"
+                    required
+                  />
 
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-              required
-            />
+                  <label htmlFor="email">Email</label>
+                  <input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    autoComplete="email"
+                    required
+                  />
+                </>
+              )}
 
-            <button className="submit" type="submit" disabled={busy}>
-              {busy
-                ? 'Please wait…'
-                : mode === 'signin'
-                  ? `Sign in as ${role}`
-                  : 'Create Author account'}
-            </button>
+              <label htmlFor="username">Username</label>
+              <input
+                id="username"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                autoComplete="username"
+                required
+              />
 
-            {message && <p className="message" role="status">{message}</p>}
-          </form>
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete={isSignup ? 'new-password' : 'current-password'}
+                required
+              />
+
+              <button className="account-submit" type="submit" disabled={busy}>
+                {busy
+                  ? 'Please wait…'
+                  : isSignup
+                    ? 'Join as Author →'
+                    : 'Sign in to continue →'}
+              </button>
+
+              {message && (
+                <p className="account-message" role="status">
+                  {message}
+                </p>
+              )}
+            </form>
+          </div>
         </section>
 
-        <footer className="auth-footer">Authors</footer>
+        <footer className="journey-footer">
+          <strong>Katiba News</strong>
+          <span>Real Stories. Stronger Democracy.</span>
+          <div className="journey-footer-steps">
+            <span className="active">01 Account</span>
+            <span>02 Profile</span>
+            <span>03 Verification</span>
+            <span>04 Dashboard</span>
+            <span>05 First Pitch</span>
+          </div>
+        </footer>
+      </main>
+    )
+  }
+
+  if (view === 'onboarding') {
+    const profileStage = journeyStage === 3 ? 3 : 2
+
+    if (profileStage === 3) {
+      return (
+        <main className="author-journey-page">
+          <header className="journey-header">
+            <button
+              className="journey-logo"
+              type="button"
+              onClick={() => navigate('home', '/')}
+            >
+              <strong>Katiba News</strong>
+              <span>Real Stories. Stronger Democracy.</span>
+            </button>
+
+            <div className="journey-header-copy">
+              <span></span>
+              <strong>Submit Work / Verification</strong>
+              <small>Share your work so the editorial team can review it.</small>
+            </div>
+
+            <button
+              className="journey-back"
+              type="button"
+              onClick={() => navigate('home', '/')}
+            >
+              Back to news
+            </button>
+          </header>
+
+          <section className="journey-body">
+            <div className="journey-progress">
+              <div className="journey-progress-label">
+                <span>Step 3 of 5</span>
+                <strong>03 · Submit Work / Verification</strong>
+              </div>
+              <div className="journey-progress-track" aria-hidden="true">
+                <span
+                  className="journey-progress-fill"
+                  style={{ width: '60%' }}
+                />
+              </div>
+            </div>
+
+            <div className="verification-layout">
+              <div className="verification-copy">
+                <span className="stage-kicker">STEP 3 · VERIFICATION</span>
+                <h1>
+                  Show us your
+                  <br />
+                  <em>work.</em>
+                </h1>
+                <p>
+                  Share recent writing samples and a short motivation statement.
+                  This gives the editorial team context for your author profile.
+                </p>
+
+                <div className="verification-checks">
+                  <div>
+                    <span>✓</span>
+                    <p>
+                      <strong>2–3 recent samples</strong>
+                      <small>Links or selected files are welcome.</small>
+                    </p>
+                  </div>
+                  <div>
+                    <span>✓</span>
+                    <p>
+                      <strong>Short motivation</strong>
+                      <small>Tell us what you would like to cover.</small>
+                    </p>
+                  </div>
+                  <div>
+                    <span>✓</span>
+                    <p>
+                      <strong>Editorial review</strong>
+                      <small>Your submission moves to the author workspace.</small>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <form
+                className="verification-card"
+                onSubmit={handleVerificationSubmit}
+              >
+                <div className="verification-card-heading">
+                  <span>KATIBA NEWS · AUTHOR VERIFICATION</span>
+                  <h2>Submit your work</h2>
+                  <p>Upload or link to examples of your published work.</p>
+                </div>
+
+                <label htmlFor="verificationFiles">Work samples</label>
+                <input
+                  id="verificationFiles"
+                  type="file"
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt"
+                  onChange={(event) => {
+                    setVerificationFiles(
+                      Array.from(event.target.files ?? []).map(
+                        (file) => file.name,
+                      ),
+                    )
+                  }}
+                />
+
+                {verificationFiles.length > 0 && (
+                  <div className="selected-files">
+                    {verificationFiles.map((file) => (
+                      <span key={file}>{file}</span>
+                    ))}
+                  </div>
+                )}
+
+                <label htmlFor="verificationArticles">
+                  Published work / article links
+                </label>
+                <textarea
+                  id="verificationArticles"
+                  value={verificationArticles}
+                  onChange={(event) =>
+                    setVerificationArticles(event.target.value)
+                  }
+                  placeholder="Paste 2–3 links to your work."
+                  rows={5}
+                />
+
+                <label htmlFor="verificationMotivation">
+                  Brief motivation
+                </label>
+                <textarea
+                  id="verificationMotivation"
+                  value={verificationMotivation}
+                  onChange={(event) =>
+                    setVerificationMotivation(event.target.value)
+                  }
+                  placeholder="Why would you like to contribute to Katiba News?"
+                  rows={4}
+                  required
+                />
+
+                <div className="verification-submit-row">
+                  <span>Progress 3 / 5</span>
+                  <button className="account-submit" type="submit" disabled={busy}>
+                    {busy ? 'Submitting…' : 'Submit for review →'}
+                  </button>
+                </div>
+
+                {message && (
+                  <p className="account-message" role="status">
+                    {message}
+                  </p>
+                )}
+              </form>
+            </div>
+          </section>
+
+          <footer className="journey-footer">
+            <strong>Katiba News</strong>
+            <span>Real Stories. Stronger Democracy.</span>
+            <div className="journey-footer-steps">
+              <span>01 Account</span>
+              <span>02 Profile</span>
+              <span className="active">03 Verification</span>
+              <span>04 Dashboard</span>
+              <span>05 First Pitch</span>
+            </div>
+          </footer>
+        </main>
+      )
+    }
+
+    return (
+      <main className="author-journey-page">
+        <header className="journey-header">
+          <button
+            className="journey-logo"
+            type="button"
+            onClick={() => navigate('home', '/')}
+          >
+            <strong>Katiba News</strong>
+            <span>Real Stories. Stronger Democracy.</span>
+          </button>
+
+          <div className="journey-header-copy">
+            <span></span>
+            <strong>Complete Your Profile</strong>
+            <small>Tell us about yourself and your reporting experience.</small>
+          </div>
+
+          <button
+            className="journey-back"
+            type="button"
+            onClick={() => navigate('home', '/')}
+          >
+            Back to news
+          </button>
+        </header>
+
+        <section className="journey-body">
+          <div className="journey-progress">
+            <div className="journey-progress-label">
+              <span>Step 2 of 5</span>
+              <strong>02 · Complete Profile</strong>
+            </div>
+            <div className="journey-progress-track" aria-hidden="true">
+              <span
+                className="journey-progress-fill"
+                style={{ width: '40%' }}
+              />
+            </div>
+          </div>
+
+          <div className="profile-layout">
+            <aside className="profile-sidebar">
+              <span className="stage-kicker">YOUR PROFILE</span>
+              <h1>
+                Tell us about
+                <br />
+                your <em>work.</em>
+              </h1>
+              <p>
+                A complete author profile helps the newsroom understand your
+                expertise, interests, and experience.
+              </p>
+
+              <div className="profile-substeps">
+                {[1, 2, 3, 4, 5, 6].map((step) => (
+                  <button
+                    key={step}
+                    type="button"
+                    className={onboardingStep === step ? 'active' : ''}
+                    onClick={() => setOnboardingStep(step)}
+                  >
+                    <span>{step}</span>
+                    <strong>
+                      {step === 1 && 'Identity'}
+                      {step === 2 && 'Experience'}
+                      {step === 3 && 'Portfolio'}
+                      {step === 4 && 'Expertise'}
+                      {step === 5 && 'Practice'}
+                      {step === 6 && 'Editorial fit'}
+                    </strong>
+                  </button>
+                ))}
+              </div>
+            </aside>
+
+            <form
+              className="profile-form"
+              onSubmit={handleAuthorProfileSubmit}
+            >
+              <div className="profile-form-heading">
+                <span>PROFILE {onboardingStep} / 6</span>
+                <h2>
+                  {onboardingStep === 1 && 'Your author identity'}
+                  {onboardingStep === 2 && 'Your experience'}
+                  {onboardingStep === 3 && 'Your portfolio'}
+                  {onboardingStep === 4 && 'Your expertise'}
+                  {onboardingStep === 5 && 'Your journalism practice'}
+                  {onboardingStep === 6 && 'Your editorial alignment'}
+                </h2>
+              </div>
+
+              {onboardingStep === 1 && (
+                <>
+                  <label htmlFor="professionalTitle">Professional title</label>
+                  <input
+                    id="professionalTitle"
+                    value={professionalTitle}
+                    onChange={(event) => setProfessionalTitle(event.target.value)}
+                    placeholder="For example: Freelance journalist"
+                    required
+                  />
+
+                  <label htmlFor="organisation">Organisation</label>
+                  <input
+                    id="organisation"
+                    value={organisation}
+                    onChange={(event) => setOrganisation(event.target.value)}
+                    placeholder="Optional"
+                  />
+
+                  <label htmlFor="location">Location</label>
+                  <input
+                    id="location"
+                    value={location}
+                    onChange={(event) => setLocation(event.target.value)}
+                    placeholder="For example: Nairobi, Kenya"
+                    required
+                  />
+
+                  <label htmlFor="areasOfExpertise">Areas of expertise</label>
+                  <input
+                    id="areasOfExpertise"
+                    value={areasOfExpertise}
+                    onChange={(event) => setAreasOfExpertise(event.target.value)}
+                    placeholder="For example: Governance, public finance"
+                    required
+                  />
+
+                  <label htmlFor="biography">Short biography</label>
+                  <textarea
+                    id="biography"
+                    value={biography}
+                    onChange={(event) => setBiography(event.target.value)}
+                    placeholder="Tell us about your writing experience and interests."
+                    rows={5}
+                    required
+                  />
+
+                  <label htmlFor="preferredByline">Preferred author/byline name</label>
+                  <input
+                    id="preferredByline"
+                    value={preferredByline}
+                    onChange={(event) => setPreferredByline(event.target.value)}
+                    placeholder="How should your name appear on published articles?"
+                  />
+
+                  <label htmlFor="phoneNumber">Phone number</label>
+                  <input
+                    id="phoneNumber"
+                    value={phoneNumber}
+                    onChange={(event) => setPhoneNumber(event.target.value)}
+                    placeholder="For example: +254 7XX XXX XXX"
+                  />
+                </>
+              )}
+
+              {onboardingStep === 2 && (
+                <>
+                  <label htmlFor="yearsOfExperience">Years of writing or journalism experience</label>
+                  <input
+                    id="yearsOfExperience"
+                    value={yearsOfExperience}
+                    onChange={(event) => setYearsOfExperience(event.target.value)}
+                    placeholder="For example: 5 years"
+                  />
+
+                  <label htmlFor="highestEducation">Highest level of education</label>
+                  <input
+                    id="highestEducation"
+                    value={highestEducation}
+                    onChange={(event) => setHighestEducation(event.target.value)}
+                    placeholder="For example: Bachelor's degree in Journalism"
+                  />
+
+                  <label htmlFor="journalismTraining">Journalism or media training</label>
+                  <textarea
+                    id="journalismTraining"
+                    value={journalismTraining}
+                    onChange={(event) => setJournalismTraining(event.target.value)}
+                    placeholder="Describe any journalism, media, or communication training."
+                    rows={4}
+                  />
+
+                  <label htmlFor="previousMediaExperience">
+                    Previous newsroom or media experience
+                  </label>
+                  <textarea
+                    id="previousMediaExperience"
+                    value={previousMediaExperience}
+                    onChange={(event) => setPreviousMediaExperience(event.target.value)}
+                    placeholder="Describe organizations, publications, stations, or platforms you have worked with."
+                    rows={4}
+                  />
+                </>
+              )}
+
+              {onboardingStep === 3 && (
+                <>
+                  <label htmlFor="portfolioUrl">Portfolio / personal website</label>
+                  <input
+                    id="portfolioUrl"
+                    type="url"
+                    value={portfolioUrl}
+                    onChange={(event) => setPortfolioUrl(event.target.value)}
+                    placeholder="https://example.com"
+                  />
+
+                  <label htmlFor="linkedinUrl">
+                    LinkedIn or professional profile
+                  </label>
+                  <input
+                    id="linkedinUrl"
+                    type="url"
+                    value={linkedinUrl}
+                    onChange={(event) => setLinkedinUrl(event.target.value)}
+                    placeholder="https://linkedin.com/in/yourname"
+                  />
+
+                  <label htmlFor="publishedWork">
+                    Published work / writing samples
+                  </label>
+                  <textarea
+                    id="publishedWork"
+                    value={publishedWork}
+                    onChange={(event) => setPublishedWork(event.target.value)}
+                    placeholder="Paste links to your published articles or writing samples."
+                    rows={7}
+                  />
+                </>
+              )}
+
+              {onboardingStep === 4 && (
+                <>
+                  <label htmlFor="areasOfExpertise">Areas of expertise</label>
+                  <input
+                    id="areasOfExpertise"
+                    value={areasOfExpertise}
+                    onChange={(event) => setAreasOfExpertise(event.target.value)}
+                    placeholder="For example: Governance, public finance"
+                    required
+                  />
+
+                  <label htmlFor="primaryExpertise">Primary area of expertise</label>
+                  <input
+                    id="primaryExpertise"
+                    value={primaryExpertise}
+                    onChange={(event) => setPrimaryExpertise(event.target.value)}
+                    placeholder="For example: Governance"
+                    required
+                  />
+
+                  <label htmlFor="secondaryExpertise">
+                    Secondary areas of expertise
+                  </label>
+                  <input
+                    id="secondaryExpertise"
+                    value={secondaryExpertise}
+                    onChange={(event) => setSecondaryExpertise(event.target.value)}
+                    placeholder="For example: Public finance, elections, law"
+                  />
+
+                  <label htmlFor="reportingBeats">Main reporting beats</label>
+                  <input
+                    id="reportingBeats"
+                    value={reportingBeats}
+                    onChange={(event) => setReportingBeats(event.target.value)}
+                    placeholder="For example: Politics, business, health"
+                    required
+                  />
+
+                  <label htmlFor="contentTypes">Types of content you produce</label>
+                  <input
+                    id="contentTypes"
+                    value={contentTypes}
+                    onChange={(event) => setContentTypes(event.target.value)}
+                    placeholder="For example: News, analysis, interviews"
+                  />
+
+                  <label htmlFor="languages">
+                    Languages you write or report in
+                  </label>
+                  <input
+                    id="languages"
+                    value={languages}
+                    onChange={(event) => setLanguages(event.target.value)}
+                    placeholder="For example: English, Kiswahili"
+                    required
+                  />
+
+                  <label htmlFor="geographicCoverage">
+                    Geographic areas you cover
+                  </label>
+                  <input
+                    id="geographicCoverage"
+                    value={geographicCoverage}
+                    onChange={(event) => setGeographicCoverage(event.target.value)}
+                    placeholder="For example: Kenya, East Africa"
+                  />
+                </>
+              )}
+
+              {onboardingStep === 5 && (
+                <>
+                  <label htmlFor="writingExperience">
+                    Describe your writing experience
+                  </label>
+                  <textarea
+                    id="writingExperience"
+                    value={writingExperience}
+                    onChange={(event) => setWritingExperience(event.target.value)}
+                    placeholder="Tell us about your writing style, experience, and areas of work."
+                    rows={6}
+                    required
+                  />
+
+                  <label htmlFor="investigativeExperience">
+                    Investigative journalism experience
+                  </label>
+                  <textarea
+                    id="investigativeExperience"
+                    value={investigativeExperience}
+                    onChange={(event) =>
+                      setInvestigativeExperience(event.target.value)
+                    }
+                    placeholder="Describe any investigative reporting experience."
+                    rows={5}
+                  />
+
+                  <label htmlFor="factCheckingExperience">
+                    Fact-checking experience
+                  </label>
+                  <textarea
+                    id="factCheckingExperience"
+                    value={factCheckingExperience}
+                    onChange={(event) =>
+                      setFactCheckingExperience(event.target.value)
+                    }
+                    placeholder="Describe your experience checking facts and claims."
+                    rows={5}
+                  />
+
+                  <label htmlFor="sourceVerificationExperience">
+                    Source verification experience
+                  </label>
+                  <textarea
+                    id="sourceVerificationExperience"
+                    value={sourceVerificationExperience}
+                    onChange={(event) =>
+                      setSourceVerificationExperience(event.target.value)
+                    }
+                    placeholder="How do you verify sources, documents, quotations, and information?"
+                    rows={5}
+                  />
+                </>
+              )}
+
+              {onboardingStep === 6 && (
+                <>
+                  <label htmlFor="topicsOfInterest">
+                    Topics you would like to cover for Katiba News
+                  </label>
+                  <textarea
+                    id="topicsOfInterest"
+                    value={topicsOfInterest}
+                    onChange={(event) => setTopicsOfInterest(event.target.value)}
+                    placeholder="Tell us the subjects and issues you would like to report on."
+                    rows={6}
+                    required
+                  />
+
+                  <label htmlFor="motivationToJoin">
+                    Why would you like to write for Katiba News?
+                  </label>
+                  <textarea
+                    id="motivationToJoin"
+                    value={motivationToJoin}
+                    onChange={(event) => setMotivationToJoin(event.target.value)}
+                    placeholder="Tell us why you want to contribute to Katiba News."
+                    rows={6}
+                    required
+                  />
+
+                  <label htmlFor="conflictsOfInterest">
+                    Professional conflicts of interest
+                  </label>
+                  <textarea
+                    id="conflictsOfInterest"
+                    value={conflictsOfInterest}
+                    onChange={(event) => setConflictsOfInterest(event.target.value)}
+                    placeholder="Tell us about any professional, financial, organizational, or other conflicts. Write 'None' where applicable."
+                    rows={5}
+                  />
+
+                  <label className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      checked={editorialStandardsAgreement}
+                      onChange={(event) =>
+                        setEditorialStandardsAgreement(event.target.checked)
+                      }
+                      required
+                    />
+                    <span>
+                      I agree to follow Katiba News editorial, accuracy, and
+                      fact-checking standards.
+                    </span>
+                  </label>
+
+                  <label htmlFor="additionalInformation">
+                    Anything else you would like the editorial team to know?
+                  </label>
+                  <textarea
+                    id="additionalInformation"
+                    value={additionalInformation}
+                    onChange={(event) => setAdditionalInformation(event.target.value)}
+                    placeholder="Add any other information that may help the editorial team."
+                    rows={5}
+                  />
+                </>
+              )}
+
+              <div className="profile-actions">
+                {onboardingStep > 1 && (
+                  <button
+                    type="button"
+                    className="profile-back"
+                    onClick={previousOnboardingStep}
+                  >
+                    ← Back
+                  </button>
+                )}
+
+                {onboardingStep < totalOnboardingSteps ? (
+                  <button
+                    type="button"
+                    className="account-submit"
+                    onClick={nextOnboardingStep}
+                  >
+                    Next →
+                  </button>
+                ) : (
+                  <button
+                    className="account-submit"
+                    type="submit"
+                    disabled={busy}
+                  >
+                    {busy ? 'Saving…' : 'Continue to verification →'}
+                  </button>
+                )}
+              </div>
+
+              {message && (
+                <p className="account-message" role="status">
+                  {message}
+                </p>
+              )}
+            </form>
+          </div>
+        </section>
+
+        <footer className="journey-footer">
+          <strong>Katiba News</strong>
+          <span>Real Stories. Stronger Democracy.</span>
+          <div className="journey-footer-steps">
+            <span>01 Account</span>
+            <span className="active">02 Profile</span>
+            <span>03 Verification</span>
+            <span>04 Dashboard</span>
+            <span>05 First Pitch</span>
+          </div>
+        </footer>
+      </main>
+    )
+  }
+
+  if (view === 'dashboard') {
+    const showPitchStage = journeyStage === 5
+
+    if (showPitchStage) {
+      return (
+        <main className="author-journey-page">
+          <header className="journey-header">
+            <button
+              className="journey-logo"
+              type="button"
+              onClick={() => navigate('home', '/')}
+            >
+              <strong>Katiba News</strong>
+              <span>Real Stories. Stronger Democracy.</span>
+            </button>
+
+            <div className="journey-header-copy">
+              <span></span>
+              <strong>First Pitch & Resources</strong>
+              <small>Your next step is ready.</small>
+            </div>
+
+            <button
+              className="journey-back"
+              type="button"
+              onClick={() => setJourneyStage(4)}
+            >
+              Back to dashboard
+            </button>
+          </header>
+
+          <section className="journey-body">
+            <div className="journey-progress">
+              <div className="journey-progress-label">
+                <span>Step 5 of 5</span>
+                <strong>05 · First Pitch & Resources</strong>
+              </div>
+              <div className="journey-progress-track">
+                <span
+                  className="journey-progress-fill"
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+
+            <div className="resources-layout">
+              <div className="resources-main">
+                <span className="stage-kicker">CONTRIBUTOR DASHBOARD</span>
+                <h1>Your first pitch starts <em>here.</em></h1>
+                <p>
+                  Use your profile and the editorial resources below to prepare
+                  your first idea for the newsroom.
+                </p>
+
+                <div className="pitch-card">
+                  <div>
+                    <span>READY WHEN YOU ARE</span>
+                    <h2>Create your first pitch</h2>
+                    <p>
+                      Outline the story, explain why it matters, and tell us who
+                      it serves.
+                    </p>
+                  </div>
+                  <div className="pitch-card-action">
+                    <span>NEW</span>
+                    <button
+                      type="button"
+                      className="account-submit"
+                      onClick={() =>
+                        setMessage(
+                          'Pitch workspace is ready for your next feature.',
+                        )
+                      }
+                    >
+                      Create your first pitch →
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <aside className="resources-side">
+                <div className="resource-card">
+                  <span>EDITORIAL RESOURCE</span>
+                  <h2>Katiba Guidelines</h2>
+                  <p>Accuracy, original work, respectful language, and source verification.</p>
+                  <button type="button" className="resource-link">
+                    Explore guidelines →
+                  </button>
+                </div>
+
+                <div className="resource-card">
+                  <span>RECENT PITCHES</span>
+                  <h2>No recent pitches</h2>
+                  <p>Your first pitch will appear here once you submit it.</p>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <footer className="journey-footer">
+            <strong>Katiba News</strong>
+            <span>Real Stories. Stronger Democracy.</span>
+            <div className="journey-footer-steps">
+              <span>01 Account</span>
+              <span>02 Profile</span>
+              <span>03 Verification</span>
+              <span className="active">04 Dashboard</span>
+              <span className="active">05 First Pitch</span>
+            </div>
+          </footer>
+        </main>
+      )
+    }
+
+    return (
+      <main className="author-journey-page">
+        <header className="journey-header">
+          <button
+            className="journey-logo"
+            type="button"
+            onClick={() => navigate('home', '/')}
+          >
+            <strong>Katiba News</strong>
+            <span>Real Stories. Stronger Democracy.</span>
+          </button>
+
+          <div className="journey-header-copy">
+            <span></span>
+            <strong>Your Dashboard</strong>
+            <small>Your author workspace is ready.</small>
+          </div>
+
+          <button
+            className="journey-back"
+            type="button"
+            onClick={() => navigate('home', '/')}
+          >
+            Back to news
+          </button>
+        </header>
+
+        <section className="journey-body">
+          <div className="journey-progress">
+            <div className="journey-progress-label">
+              <span>Step 4 of 5</span>
+              <strong>04 · Your Dashboard</strong>
+            </div>
+            <div className="journey-progress-track">
+              <span
+                className="journey-progress-fill"
+                style={{ width: '80%' }}
+              />
+            </div>
+          </div>
+
+          <div className="dashboard-layout">
+            <aside className="dashboard-side">
+              <div className="dashboard-profile">
+                <span className="author-avatar large">
+                  {(signedInUser?.username || 'A').slice(0, 1).toUpperCase()}
+                </span>
+                <strong>{signedInUser?.username || 'Author'}</strong>
+                <small>Author profile</small>
+              </div>
+
+              <nav aria-label="Author dashboard">
+                <button type="button" className="active">
+                  Overview
+                </button>
+                <button type="button">Articles</button>
+                <button type="button">Pitches</button>
+                <button type="button">Settings</button>
+              </nav>
+            </aside>
+
+            <div className="dashboard-main">
+              <div className="dashboard-welcome">
+                <div>
+                  <span className="stage-kicker">WELCOME, {signedInUser?.username || 'AUTHOR'}</span>
+                  <h1>Reviewing your profile</h1>
+                  <p>
+                    Your author workspace is ready for the next step in your journey.
+                  </p>
+                </div>
+                <div className="pending-badge">Pending Review</div>
+              </div>
+
+              <div className="dashboard-grid">
+                <article className="dashboard-card status-card">
+                  <span>PROFILE</span>
+                  <h2>Complete</h2>
+                  <p>Your onboarding information has been submitted.</p>
+                </article>
+
+                <article className="dashboard-card">
+                  <span>GET STARTED</span>
+                  <h2>Explore Katiba Guidelines</h2>
+                  <p>
+                    Review the editorial standards before preparing your first pitch.
+                  </p>
+                  <button
+                    type="button"
+                    className="account-submit"
+                    onClick={() => setJourneyStage(5)}
+                  >
+                    Go to resources →
+                  </button>
+                </article>
+
+                <article className="dashboard-card wide">
+                  <span>EDITORIAL TEAM</span>
+                  <h2>Your profile is under review</h2>
+                  <div className="review-timeline">
+                    <div className="done">
+                      <span>✓</span>
+                      <p>
+                        <strong>Profile submitted</strong>
+                        <small>Information received</small>
+                      </p>
+                    </div>
+                    <div className="current">
+                      <span>●</span>
+                      <p>
+                        <strong>Pending review</strong>
+                        <small>The editorial team is reviewing your profile</small>
+                      </p>
+                    </div>
+                    <div>
+                      <span>○</span>
+                      <p>
+                        <strong>First pitch</strong>
+                        <small>Prepare your first story idea</small>
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer className="journey-footer">
+          <strong>Katiba News</strong>
+          <span>Real Stories. Stronger Democracy.</span>
+          <div className="journey-footer-steps">
+            <span>01 Account</span>
+            <span>02 Profile</span>
+            <span>03 Verification</span>
+            <span className="active">04 Dashboard</span>
+            <span>05 First Pitch</span>
+          </div>
+        </footer>
       </main>
     )
   }
