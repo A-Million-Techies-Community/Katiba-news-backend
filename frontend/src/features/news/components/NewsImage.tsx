@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { newsFetch } from './api'
+import { newsFetch } from '../api'
 
 /** Display private news images using the same authentication as the dashboard. */
 export default function NewsImage({ src, alt }: { src: string; alt: string }) {

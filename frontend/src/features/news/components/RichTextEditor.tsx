@@ -6,7 +6,7 @@ import type { NodeViewProps } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import NewsImage from './NewsImage'
-import { uploadImage } from './api'
+import { uploadImage } from '../api'
 
 /** A native modal preserves the story selection while fields receive keyboard focus. */
 function EditorDialog({ title, busy = false, onClose, children }: { title: string; busy?: boolean; onClose: () => void; children: ReactNode }) {
