@@ -7,7 +7,7 @@ import { BlogView } from './features/blogs/components/BlogView'
 
 type Role = 'Author'
 type Mode = 'signin' | 'signup'
-type View = 'home' | 'auth' | 'onboarding' | 'dashboard'
+type View = 'home' | 'auth' | 'onboarding'
 
 const pathToView = (path: string): View => {
   switch (path) {
@@ -16,8 +16,6 @@ const pathToView = (path: string): View => {
       return 'auth'
     case '/author/complete-profile':
       return 'onboarding'
-    case '/author/dashboard':
-      return 'dashboard'
     default:
       return 'home'
   }
@@ -27,7 +25,6 @@ const viewToPath: Record<View, string> = {
   home: '/',
   auth: '/signin',
   onboarding: '/author/complete-profile',
-  dashboard: '/author/dashboard',
 }
 
 const featuredStories = [
@@ -254,9 +251,6 @@ const [additionalInformation, setAdditionalInformation] = useState('')
 const [onboardingStep, setOnboardingStep] = useState(1)
   const totalOnboardingSteps = 6
   const [journeyStage, setJourneyStage] = useState(1)
-  const [verificationFiles, setVerificationFiles] = useState<string[]>([])
-  const [verificationArticles, setVerificationArticles] = useState('')
-  const [verificationMotivation, setVerificationMotivation] = useState('')
 
 const nextOnboardingStep = () => {
   setOnboardingStep((step) =>
@@ -369,7 +363,8 @@ const [message, setMessage] = useState('')
     setPassword('')
 if (account.profile_complete) {
       setJourneyStage(4)
-      navigate('dashboard', '/author/dashboard')
+      setJourneyStage(2)
+    setMessage('Profile submitted successfully. Your author profile is complete.')
     } else {
       setJourneyStage(2)
       setOnboardingStep(1)
@@ -460,20 +455,14 @@ if (!savedSession) {
     }
 
     setMessage('')
-   navigate('dashboard', '/author/dashboard')
+   setJourneyStage(2)
+    setMessage('Profile submitted successfully. Your author profile is complete.')
   } catch {
     setMessage('Could not save your profile. Check that Django is running.')
   } finally {
     setBusy(false)
   }
 }
-
-  function handleVerificationSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setMessage('')
-    setJourneyStage(4)
-    navigate('dashboard', '/author/dashboard')
-  }
 
   function openAuth(nextMode: Mode = 'signin') {
   setMode(nextMode)
@@ -520,7 +509,7 @@ if (!savedSession) {
         <section className="journey-body">
           <div className="journey-progress">
             <div className="journey-progress-label">
-              <span>Step {stage} of 5</span>
+              <span>Step {stage} of 2</span>
               <strong>01 · Create Account</strong>
             </div>
             <div className="journey-progress-track" aria-hidden="true">
@@ -548,10 +537,7 @@ if (!savedSession) {
                 <span className="active">Create account</span>
                 <i>→</i>
                 <span>Complete profile</span>
-                <i>→</i>
-                <span>Submit work</span>
-                <i>→</i>
-                <span>Dashboard</span>
+                
               </div>
             </div>
 
@@ -663,9 +649,6 @@ if (!savedSession) {
           <div className="journey-footer-steps">
             <span className="active">01 Account</span>
             <span>02 Profile</span>
-            <span>03 Verification</span>
-            <span>04 Dashboard</span>
-            <span>05 First Pitch</span>
           </div>
         </footer>
       </main>
@@ -673,178 +656,8 @@ if (!savedSession) {
   }
 
   if (view === 'onboarding') {
-    const profileStage = journeyStage === 3 ? 3 : 2
+    const profileStage = 2
 
-    if (profileStage === 3) {
-      return (
-        <main className="author-journey-page">
-          <header className="journey-header">
-            <button
-              className="journey-logo"
-              type="button"
-              onClick={() => navigate('home', '/')}
-            >
-              <strong>Katiba News</strong>
-              <span>Real Stories. Stronger Democracy.</span>
-            </button>
-
-            <div className="journey-header-copy">
-              <span></span>
-              <strong>Submit Work / Verification</strong>
-              <small>Share your work so the editorial team can review it.</small>
-            </div>
-
-            <button
-              className="journey-back"
-              type="button"
-              onClick={() => navigate('home', '/')}
-            >
-              Back to news
-            </button>
-          </header>
-
-          <section className="journey-body">
-            <div className="journey-progress">
-              <div className="journey-progress-label">
-                <span>Step 3 of 5</span>
-                <strong>03 · Submit Work / Verification</strong>
-              </div>
-              <div className="journey-progress-track" aria-hidden="true">
-                <span
-                  className="journey-progress-fill"
-                  style={{ width: '60%' }}
-                />
-              </div>
-            </div>
-
-            <div className="verification-layout">
-              <div className="verification-copy">
-                <span className="stage-kicker">STEP 3 · VERIFICATION</span>
-                <h1>
-                  Show us your
-                  <br />
-                  <em>work.</em>
-                </h1>
-                <p>
-                  Share recent writing samples and a short motivation statement.
-                  This gives the editorial team context for your author profile.
-                </p>
-
-                <div className="verification-checks">
-                  <div>
-                    <span>✓</span>
-                    <p>
-                      <strong>2–3 recent samples</strong>
-                      <small>Links or selected files are welcome.</small>
-                    </p>
-                  </div>
-                  <div>
-                    <span>✓</span>
-                    <p>
-                      <strong>Short motivation</strong>
-                      <small>Tell us what you would like to cover.</small>
-                    </p>
-                  </div>
-                  <div>
-                    <span>✓</span>
-                    <p>
-                      <strong>Editorial review</strong>
-                      <small>Your submission moves to the author workspace.</small>
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <form
-                className="verification-card"
-                onSubmit={handleVerificationSubmit}
-              >
-                <div className="verification-card-heading">
-                  <span>KATIBA NEWS · AUTHOR VERIFICATION</span>
-                  <h2>Submit your work</h2>
-                  <p>Upload or link to examples of your published work.</p>
-                </div>
-
-                <label htmlFor="verificationFiles">Work samples</label>
-                <input
-                  id="verificationFiles"
-                  type="file"
-                  multiple
-                  accept=".pdf,.doc,.docx,.txt"
-                  onChange={(event) => {
-                    setVerificationFiles(
-                      Array.from(event.target.files ?? []).map(
-                        (file) => file.name,
-                      ),
-                    )
-                  }}
-                />
-
-                {verificationFiles.length > 0 && (
-                  <div className="selected-files">
-                    {verificationFiles.map((file) => (
-                      <span key={file}>{file}</span>
-                    ))}
-                  </div>
-                )}
-
-                <label htmlFor="verificationArticles">
-                  Published work / article links
-                </label>
-                <textarea
-                  id="verificationArticles"
-                  value={verificationArticles}
-                  onChange={(event) =>
-                    setVerificationArticles(event.target.value)
-                  }
-                  placeholder="Paste 2–3 links to your work."
-                  rows={5}
-                />
-
-                <label htmlFor="verificationMotivation">
-                  Brief motivation
-                </label>
-                <textarea
-                  id="verificationMotivation"
-                  value={verificationMotivation}
-                  onChange={(event) =>
-                    setVerificationMotivation(event.target.value)
-                  }
-                  placeholder="Why would you like to contribute to Katiba News?"
-                  rows={4}
-                  required
-                />
-
-                <div className="verification-submit-row">
-                  <span>Progress 3 / 5</span>
-                  <button className="account-submit" type="submit" disabled={busy}>
-                    {busy ? 'Submitting…' : 'Submit for review →'}
-                  </button>
-                </div>
-
-                {message && (
-                  <p className="account-message" role="status">
-                    {message}
-                  </p>
-                )}
-              </form>
-            </div>
-          </section>
-
-          <footer className="journey-footer">
-            <strong>Katiba News</strong>
-            <span>Real Stories. Stronger Democracy.</span>
-            <div className="journey-footer-steps">
-              <span>01 Account</span>
-              <span>02 Profile</span>
-              <span className="active">03 Verification</span>
-              <span>04 Dashboard</span>
-              <span>05 First Pitch</span>
-            </div>
-          </footer>
-        </main>
-      )
-    }
 
     return (
       <main className="author-journey-page">
@@ -876,7 +689,7 @@ if (!savedSession) {
         <section className="journey-body">
           <div className="journey-progress">
             <div className="journey-progress-label">
-              <span>Step 2 of 5</span>
+              <span>Step 2 of 2</span>
               <strong>02 · Complete Profile</strong>
             </div>
             <div className="journey-progress-track" aria-hidden="true">
@@ -1293,7 +1106,7 @@ if (!savedSession) {
                     type="submit"
                     disabled={busy}
                   >
-                    {busy ? 'Saving…' : 'Continue to verification →'}
+                    {busy ? 'Saving…' : 'Submit profile →'}
                   </button>
                 )}
               </div>
@@ -1313,270 +1126,12 @@ if (!savedSession) {
           <div className="journey-footer-steps">
             <span>01 Account</span>
             <span className="active">02 Profile</span>
-            <span>03 Verification</span>
-            <span>04 Dashboard</span>
-            <span>05 First Pitch</span>
           </div>
         </footer>
       </main>
     )
   }
 
-  if (view === 'dashboard') {
-    const showPitchStage = journeyStage === 5
-
-    if (showPitchStage) {
-      return (
-        <main className="author-journey-page">
-          <header className="journey-header">
-            <button
-              className="journey-logo"
-              type="button"
-              onClick={() => navigate('home', '/')}
-            >
-              <strong>Katiba News</strong>
-              <span>Real Stories. Stronger Democracy.</span>
-            </button>
-
-            <div className="journey-header-copy">
-              <span></span>
-              <strong>First Pitch & Resources</strong>
-              <small>Your next step is ready.</small>
-            </div>
-
-            <button
-              className="journey-back"
-              type="button"
-              onClick={() => setJourneyStage(4)}
-            >
-              Back to dashboard
-            </button>
-          </header>
-
-          <section className="journey-body">
-            <div className="journey-progress">
-              <div className="journey-progress-label">
-                <span>Step 5 of 5</span>
-                <strong>05 · First Pitch & Resources</strong>
-              </div>
-              <div className="journey-progress-track">
-                <span
-                  className="journey-progress-fill"
-                  style={{ width: '100%' }}
-                />
-              </div>
-            </div>
-
-            <div className="resources-layout">
-              <div className="resources-main">
-                <span className="stage-kicker">CONTRIBUTOR DASHBOARD</span>
-                <h1>Your first pitch starts <em>here.</em></h1>
-                <p>
-                  Use your profile and the editorial resources below to prepare
-                  your first idea for the newsroom.
-                </p>
-
-                <div className="pitch-card">
-                  <div>
-                    <span>READY WHEN YOU ARE</span>
-                    <h2>Create your first pitch</h2>
-                    <p>
-                      Outline the story, explain why it matters, and tell us who
-                      it serves.
-                    </p>
-                  </div>
-                  <div className="pitch-card-action">
-                    <span>NEW</span>
-                    <button
-                      type="button"
-                      className="account-submit"
-                      onClick={() =>
-                        setMessage(
-                          'Pitch workspace is ready for your next feature.',
-                        )
-                      }
-                    >
-                      Create your first pitch →
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <aside className="resources-side">
-                <div className="resource-card">
-                  <span>EDITORIAL RESOURCE</span>
-                  <h2>Katiba Guidelines</h2>
-                  <p>Accuracy, original work, respectful language, and source verification.</p>
-                  <button type="button" className="resource-link">
-                    Explore guidelines →
-                  </button>
-                </div>
-
-                <div className="resource-card">
-                  <span>RECENT PITCHES</span>
-                  <h2>No recent pitches</h2>
-                  <p>Your first pitch will appear here once you submit it.</p>
-                </div>
-              </aside>
-            </div>
-          </section>
-
-          <footer className="journey-footer">
-            <strong>Katiba News</strong>
-            <span>Real Stories. Stronger Democracy.</span>
-            <div className="journey-footer-steps">
-              <span>01 Account</span>
-              <span>02 Profile</span>
-              <span>03 Verification</span>
-              <span className="active">04 Dashboard</span>
-              <span className="active">05 First Pitch</span>
-            </div>
-          </footer>
-        </main>
-      )
-    }
-
-    return (
-      <main className="author-journey-page">
-        <header className="journey-header">
-          <button
-            className="journey-logo"
-            type="button"
-            onClick={() => navigate('home', '/')}
-          >
-            <strong>Katiba News</strong>
-            <span>Real Stories. Stronger Democracy.</span>
-          </button>
-
-          <div className="journey-header-copy">
-            <span></span>
-            <strong>Your Dashboard</strong>
-            <small>Your author workspace is ready.</small>
-          </div>
-
-          <button
-            className="journey-back"
-            type="button"
-            onClick={() => navigate('home', '/')}
-          >
-            Back to news
-          </button>
-        </header>
-
-        <section className="journey-body">
-          <div className="journey-progress">
-            <div className="journey-progress-label">
-              <span>Step 4 of 5</span>
-              <strong>04 · Your Dashboard</strong>
-            </div>
-            <div className="journey-progress-track">
-              <span
-                className="journey-progress-fill"
-                style={{ width: '80%' }}
-              />
-            </div>
-          </div>
-
-          <div className="dashboard-layout">
-            <aside className="dashboard-side">
-              <div className="dashboard-profile">
-                <span className="author-avatar large">
-                  {(signedInUser?.username || 'A').slice(0, 1).toUpperCase()}
-                </span>
-                <strong>{signedInUser?.username || 'Author'}</strong>
-                <small>Author profile</small>
-              </div>
-
-              <nav aria-label="Author dashboard">
-                <button type="button" className="active">
-                  Overview
-                </button>
-                <button type="button">Articles</button>
-                <button type="button">Pitches</button>
-                <button type="button">Settings</button>
-              </nav>
-            </aside>
-
-            <div className="dashboard-main">
-              <div className="dashboard-welcome">
-                <div>
-                  <span className="stage-kicker">WELCOME, {signedInUser?.username || 'AUTHOR'}</span>
-                  <h1>Reviewing your profile</h1>
-                  <p>
-                    Your author workspace is ready for the next step in your journey.
-                  </p>
-                </div>
-                <div className="pending-badge">Pending Review</div>
-              </div>
-
-              <div className="dashboard-grid">
-                <article className="dashboard-card status-card">
-                  <span>PROFILE</span>
-                  <h2>Complete</h2>
-                  <p>Your onboarding information has been submitted.</p>
-                </article>
-
-                <article className="dashboard-card">
-                  <span>GET STARTED</span>
-                  <h2>Explore Katiba Guidelines</h2>
-                  <p>
-                    Review the editorial standards before preparing your first pitch.
-                  </p>
-                  <button
-                    type="button"
-                    className="account-submit"
-                    onClick={() => setJourneyStage(5)}
-                  >
-                    Go to resources →
-                  </button>
-                </article>
-
-                <article className="dashboard-card wide">
-                  <span>EDITORIAL TEAM</span>
-                  <h2>Your profile is under review</h2>
-                  <div className="review-timeline">
-                    <div className="done">
-                      <span>✓</span>
-                      <p>
-                        <strong>Profile submitted</strong>
-                        <small>Information received</small>
-                      </p>
-                    </div>
-                    <div className="current">
-                      <span>●</span>
-                      <p>
-                        <strong>Pending review</strong>
-                        <small>The editorial team is reviewing your profile</small>
-                      </p>
-                    </div>
-                    <div>
-                      <span>○</span>
-                      <p>
-                        <strong>First pitch</strong>
-                        <small>Prepare your first story idea</small>
-                      </p>
-                    </div>
-                  </div>
-                </article>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <footer className="journey-footer">
-          <strong>Katiba News</strong>
-          <span>Real Stories. Stronger Democracy.</span>
-          <div className="journey-footer-steps">
-            <span>01 Account</span>
-            <span>02 Profile</span>
-            <span>03 Verification</span>
-            <span className="active">04 Dashboard</span>
-            <span>05 First Pitch</span>
-          </div>
-        </footer>
-      </main>
-    )
-  }
 
   const filteredLatest = latestStories.filter((story) =>
     story.title.toLowerCase().includes(search.toLowerCase()),

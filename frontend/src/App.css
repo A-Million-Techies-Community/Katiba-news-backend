@@ -4256,3 +4256,489 @@ a {
   }
 }
 
+
+/* =========================================================
+   AUTHOR ONBOARDING — KATIBA DASHBOARD COLOR SYSTEM
+   Based on the supplied reference screenshot
+   ========================================================= */
+
+.author-journey-page {
+  --author-bg: #f4f8f7 !important;
+  --author-white: #ffffff !important;
+  --author-dark: #142729 !important;
+  --author-teal: #176b63 !important;
+  --author-green: #2fbf8f !important;
+  --author-text: #17252a !important;
+  --author-muted: #6f7e80 !important;
+  --author-border: #dbe5e3 !important;
+  --author-soft: #edf4f2 !important;
+
+  background: var(--author-bg) !important;
+  color: var(--author-text) !important;
+}
+
+/* Top onboarding header */
+.author-journey-page .journey-header {
+  background: var(--author-white) !important;
+  color: var(--author-text) !important;
+  border-bottom: 1px solid var(--author-border) !important;
+  box-shadow: 0 2px 10px rgba(20, 39, 41, 0.04) !important;
+}
+
+.author-journey-page .journey-logo {
+  color: var(--author-dark) !important;
+}
+
+.author-journey-page .journey-logo strong {
+  color: var(--author-dark) !important;
+}
+
+.author-journey-page .journey-logo span {
+  color: var(--author-muted) !important;
+}
+
+.author-journey-page .journey-header-copy strong {
+  color: var(--author-dark) !important;
+}
+
+.author-journey-page .journey-header-copy small {
+  color: var(--author-muted) !important;
+}
+
+.author-journey-page .journey-back {
+  color: var(--author-teal) !important;
+  background: var(--author-white) !important;
+  border: 1px solid var(--author-teal) !important;
+}
+
+.author-journey-page .journey-back:hover {
+  background: var(--author-teal) !important;
+  color: #ffffff !important;
+}
+
+/* Main onboarding background */
+.author-journey-page .journey-body {
+  background: var(--author-bg) !important;
+}
+
+/* Progress area */
+.author-journey-page .journey-progress-label span,
+.author-journey-page .journey-progress-label strong {
+  color: var(--author-text) !important;
+}
+
+.author-journey-page .journey-progress-track {
+  background: #dce7e4 !important;
+}
+
+.author-journey-page .journey-progress-fill {
+  background: var(--author-green) !important;
+}
+
+/* Profile/sidebar */
+.author-journey-page .profile-sidebar {
+  background: var(--author-dark) !important;
+  color: #ffffff !important;
+}
+
+.author-journey-page .profile-sidebar h1,
+.author-journey-page .profile-sidebar p {
+  color: #ffffff !important;
+}
+
+.author-journey-page .profile-sidebar p {
+  color: rgba(255,255,255,.72) !important;
+}
+
+.author-journey-page .stage-kicker {
+  color: var(--author-green) !important;
+}
+
+/* Profile navigation steps */
+.author-journey-page .profile-substeps button {
+  color: rgba(255,255,255,.72) !important;
+  border-color: rgba(255,255,255,.14) !important;
+}
+
+.author-journey-page .profile-substeps button span {
+  background: rgba(255,255,255,.10) !important;
+  color: #ffffff !important;
+}
+
+.author-journey-page .profile-substeps button.active {
+  background: var(--author-teal) !important;
+  color: #ffffff !important;
+  border-color: var(--author-teal) !important;
+}
+
+.author-journey-page .profile-substeps button.active span {
+  background: var(--author-green) !important;
+  color: #ffffff !important;
+}
+
+/* Main profile form */
+.author-journey-page .profile-form,
+.author-journey-page .account-form,
+.author-journey-page .verification-form {
+  background: var(--author-white) !important;
+  color: var(--author-text) !important;
+  border: 1px solid var(--author-border) !important;
+  box-shadow: 0 8px 28px rgba(20, 39, 41, 0.06) !important;
+}
+
+.author-journey-page .profile-form-heading span,
+.author-journey-page .account-form-heading span {
+  color: var(--author-green) !important;
+}
+
+.author-journey-page .profile-form-heading h2,
+.author-journey-page .account-form-heading h2 {
+  color: var(--author-dark) !important;
+}
+
+.author-journey-page label {
+  color: var(--author-text) !important;
+}
+
+.author-journey-page input,
+.author-journey-page textarea,
+.author-journey-page select {
+  background: #fbfdfc !important;
+  color: var(--author-text) !important;
+  border: 1px solid var(--author-border) !important;
+}
+
+.author-journey-page input:focus,
+.author-journey-page textarea:focus,
+.author-journey-page select:focus {
+  border-color: var(--author-teal) !important;
+  box-shadow: 0 0 0 3px rgba(23, 107, 99, 0.10) !important;
+  outline: none !important;
+}
+
+/* Primary buttons */
+.author-journey-page .account-submit {
+  background: var(--author-teal) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--author-teal) !important;
+}
+
+.author-journey-page .account-submit:hover {
+  background: var(--author-dark) !important;
+  border-color: var(--author-dark) !important;
+}
+
+/* Secondary buttons */
+.author-journey-page .profile-back {
+  background: #ffffff !important;
+  color: var(--author-teal) !important;
+  border: 1px solid var(--author-border) !important;
+}
+
+.author-journey-page .profile-back:hover {
+  border-color: var(--author-teal) !important;
+  background: var(--author-soft) !important;
+}
+
+/* Checkbox */
+.author-journey-page .checkbox-row span {
+  color: var(--author-text) !important;
+}
+
+/* Messages */
+.author-journey-page .account-message {
+  color: var(--author-teal) !important;
+}
+
+/* Footer */
+.author-journey-page .journey-footer {
+  background: var(--author-dark) !important;
+  color: rgba(255,255,255,.72) !important;
+  border-top: 1px solid rgba(255,255,255,.08) !important;
+}
+
+.author-journey-page .journey-footer strong {
+  color: #ffffff !important;
+}
+
+.author-journey-page .journey-footer > span {
+  color: rgba(255,255,255,.62) !important;
+}
+
+.author-journey-page .journey-footer-steps span {
+  color: rgba(255,255,255,.45) !important;
+}
+
+.author-journey-page .journey-footer-steps span.active {
+  color: var(--author-green) !important;
+}
+
+/* Account-mode tabs */
+.author-journey-page .account-mode {
+  background: var(--author-soft) !important;
+  border-color: var(--author-border) !important;
+}
+
+.author-journey-page .account-mode button {
+  color: var(--author-muted) !important;
+}
+
+.author-journey-page .account-mode button.active {
+  background: var(--author-white) !important;
+  color: var(--author-teal) !important;
+  box-shadow: 0 2px 8px rgba(20,39,41,.08) !important;
+}
+
+/* Links and interactive text */
+.author-journey-page a {
+  color: var(--author-teal) !important;
+}
+
+.author-journey-page a:hover {
+  color: var(--author-dark) !important;
+}
+
+@media (max-width: 760px) {
+  .author-journey-page .journey-header {
+    background: var(--author-white) !important;
+  }
+
+  .author-journey-page .profile-sidebar {
+    background: var(--author-dark) !important;
+  }
+
+  .author-journey-page .profile-form,
+  .author-journey-page .account-form {
+    box-shadow: none !important;
+  }
+}
+
+
+/* EXACTER REFERENCE-STYLE PALETTE FOR AUTHOR ONBOARDING */
+.author-journey-page {
+  --author-bg: #f6f9f8 !important;
+  --author-white: #ffffff !important;
+  --author-dark: #162b2d !important;
+  --author-teal: #1b766c !important;
+  --author-green: #35bd91 !important;
+  --author-text: #1b2c2e !important;
+  --author-muted: #718083 !important;
+  --author-border: #dfe8e6 !important;
+  --author-soft: #edf4f2 !important;
+
+  background: #f6f9f8 !important;
+  color: #1b2c2e !important;
+}
+
+/* HEADER */
+.author-journey-page .journey-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #dfe8e6 !important;
+  color: #162b2d !important;
+}
+
+.author-journey-page .journey-logo,
+.author-journey-page .journey-logo strong,
+.author-journey-page .journey-header-copy strong {
+  color: #162b2d !important;
+}
+
+.author-journey-page .journey-logo span,
+.author-journey-page .journey-header-copy small {
+  color: #718083 !important;
+}
+
+.author-journey-page .journey-back {
+  background: #ffffff !important;
+  color: #1b766c !important;
+  border: 1px solid #1b766c !important;
+}
+
+.author-journey-page .journey-back:hover {
+  background: #1b766c !important;
+  color: #ffffff !important;
+}
+
+/* PAGE */
+.author-journey-page .journey-body {
+  background: #f6f9f8 !important;
+}
+
+/* PROGRESS */
+.author-journey-page .journey-progress-track {
+  background: #dce7e4 !important;
+}
+
+.author-journey-page .journey-progress-fill {
+  background: #35bd91 !important;
+}
+
+/* DARK PROFILE PANEL */
+.author-journey-page .profile-sidebar {
+  background: #162b2d !important;
+  color: #ffffff !important;
+}
+
+.author-journey-page .profile-sidebar h1 {
+  color: #ffffff !important;
+}
+
+.author-journey-page .profile-sidebar p {
+  color: rgba(255,255,255,.70) !important;
+}
+
+.author-journey-page .stage-kicker {
+  color: #35bd91 !important;
+}
+
+/* PROFILE STEP NAVIGATION */
+.author-journey-page .profile-substeps button {
+  color: rgba(255,255,255,.72) !important;
+}
+
+.author-journey-page .profile-substeps button span {
+  background: rgba(255,255,255,.10) !important;
+  color: #ffffff !important;
+}
+
+.author-journey-page .profile-substeps button.active {
+  background: #1b766c !important;
+  border-color: #1b766c !important;
+  color: #ffffff !important;
+}
+
+.author-journey-page .profile-substeps button.active span {
+  background: #35bd91 !important;
+}
+
+/* WHITE FORM CARD */
+.author-journey-page .profile-form,
+.author-journey-page .account-form {
+  background: #ffffff !important;
+  color: #1b2c2e !important;
+  border: 1px solid #dfe8e6 !important;
+  box-shadow: 0 10px 30px rgba(22,43,45,.06) !important;
+}
+
+.author-journey-page .profile-form-heading h2,
+.author-journey-page .account-form-heading h2 {
+  color: #162b2d !important;
+}
+
+.author-journey-page label {
+  color: #1b2c2e !important;
+}
+
+/* INPUTS */
+.author-journey-page input,
+.author-journey-page textarea,
+.author-journey-page select {
+  background: #ffffff !important;
+  color: #1b2c2e !important;
+  border: 1px solid #d8e3e1 !important;
+}
+
+.author-journey-page input:focus,
+.author-journey-page textarea:focus,
+.author-journey-page select:focus {
+  border-color: #1b766c !important;
+  box-shadow: 0 0 0 3px rgba(27,118,108,.10) !important;
+}
+
+/* PRIMARY BUTTON */
+.author-journey-page .account-submit {
+  background: #1b766c !important;
+  border-color: #1b766c !important;
+  color: #ffffff !important;
+}
+
+.author-journey-page .account-submit:hover {
+  background: #162b2d !important;
+  border-color: #162b2d !important;
+}
+
+/* SECONDARY BUTTON */
+.author-journey-page .profile-back {
+  background: #ffffff !important;
+  color: #1b766c !important;
+  border: 1px solid #d8e3e1 !important;
+}
+
+.author-journey-page .profile-back:hover {
+  background: #edf4f2 !important;
+  border-color: #1b766c !important;
+}
+
+/* ACCOUNT TABS */
+.author-journey-page .account-mode {
+  background: #edf4f2 !important;
+  border: 1px solid #dfe8e6 !important;
+}
+
+.author-journey-page .account-mode button {
+  color: #718083 !important;
+}
+
+.author-journey-page .account-mode button.active {
+  background: #ffffff !important;
+  color: #1b766c !important;
+}
+
+/* FOOTER */
+.author-journey-page .journey-footer {
+  background: #162b2d !important;
+  color: rgba(255,255,255,.70) !important;
+  border-top: 1px solid rgba(255,255,255,.08) !important;
+}
+
+.author-journey-page .journey-footer strong {
+  color: #ffffff !important;
+}
+
+.author-journey-page .journey-footer > span {
+  color: rgba(255,255,255,.60) !important;
+}
+
+.author-journey-page .journey-footer-steps span {
+  color: rgba(255,255,255,.42) !important;
+}
+
+.author-journey-page .journey-footer-steps span.active {
+  color: #35bd91 !important;
+}
+
+
+/* MATCH AUTHOR ONBOARDING HEADER TO FOOTER */
+.author-journey-page .journey-header {
+  background: #162b2d !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid rgba(255,255,255,.10) !important;
+}
+
+.author-journey-page .journey-logo,
+.author-journey-page .journey-logo strong,
+.author-journey-page .journey-header-copy strong {
+  color: #ffffff !important;
+}
+
+.author-journey-page .journey-logo span,
+.author-journey-page .journey-header-copy small {
+  color: rgba(255,255,255,.68) !important;
+}
+
+.author-journey-page .journey-header-copy > span {
+  color: #35bd91 !important;
+}
+
+.author-journey-page .journey-back {
+  background: transparent !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255,255,255,.45) !important;
+}
+
+.author-journey-page .journey-back:hover {
+  background: #1b766c !important;
+  border-color: #1b766c !important;
+  color: #ffffff !important;
+}
+
