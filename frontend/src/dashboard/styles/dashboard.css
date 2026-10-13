@@ -352,3 +352,47 @@
 .nd-shell .nd-status-tabs .nd-status-rejected span { color: var(--nd-alert); }
 .nd-shell .nd-status-tabs .nd-status-rejected[aria-pressed="true"],
 .nd-shell .nd-status-tabs .nd-status-rejected span { background: var(--nd-alert-soft); }
+
+
+/* Clickable author identity in the dashboard header */
+.nd-account-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.nd-account-profile > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.nd-account-profile strong { color: inherit; }
+.nd-account-profile small { opacity: .78; }
+
+.nd-account-profile:hover:not(:disabled) {
+  background: rgba(0, 169, 133, .12);
+  border-color: rgba(66, 231, 187, .28);
+}
+
+.nd-account-profile:focus-visible {
+  outline: 2px solid #42e7bb;
+  outline-offset: 3px;
+}
+
+.nd-account-profile:disabled {
+  cursor: default;
+  opacity: .85;
+}
+

@@ -14,6 +14,80 @@ type Category = { id: number; name: string }
 type Story = { id: number; title: string; content: string; category: number; category_name: string; author: number; author_username: string; status: string; feedback: string; updated_at: string; submitted_at?: string | null; featured_image: string | null; featured_image_url: string | null; featured_image_alt: string; featured_image_caption: string }
 const statuses = ['draft', 'submitted', 'approved', 'rejected']
 
+type AuthorProfile = {
+  professional_title: string
+  preferred_byline: string
+  organisation: string
+  location: string
+  phone_number: string
+  years_of_experience: string
+  highest_education: string
+  journalism_training: string
+  previous_media_experience: string
+  portfolio_url: string
+  linkedin_url: string
+  published_work: string
+  primary_expertise: string
+  secondary_expertise: string
+  reporting_beats: string
+  content_types: string
+  languages: string
+  geographic_coverage: string
+  writing_experience: string
+  investigative_experience: string
+  fact_checking_experience: string
+  source_verification_experience: string
+  topics_of_interest: string
+  motivation_to_join: string
+  conflicts_of_interest: string
+  editorial_standards_agreement: boolean
+  additional_information: string
+  areas_of_expertise: string
+  biography: string
+  onboarding_complete: boolean
+}
+
+type AuthorProfileFieldKey = Exclude<
+  keyof AuthorProfile,
+  'editorial_standards_agreement' | 'onboarding_complete'
+>
+
+const authorProfileFields: {
+  key: AuthorProfileFieldKey
+  label: string
+  multiline?: boolean
+  type?: 'text' | 'url'
+}[] = [
+  { key: 'professional_title', label: 'Professional title' },
+  { key: 'preferred_byline', label: 'Preferred author / byline name' },
+  { key: 'organisation', label: 'Organisation' },
+  { key: 'location', label: 'Location' },
+  { key: 'phone_number', label: 'Phone number' },
+  { key: 'years_of_experience', label: 'Years of experience' },
+  { key: 'highest_education', label: 'Highest education' },
+  { key: 'journalism_training', label: 'Journalism training', multiline: true },
+  { key: 'previous_media_experience', label: 'Previous media experience', multiline: true },
+  { key: 'portfolio_url', label: 'Portfolio URL', type: 'url' },
+  { key: 'linkedin_url', label: 'LinkedIn URL', type: 'url' },
+  { key: 'published_work', label: 'Published work', multiline: true },
+  { key: 'areas_of_expertise', label: 'Areas of expertise' },
+  { key: 'primary_expertise', label: 'Primary expertise' },
+  { key: 'secondary_expertise', label: 'Secondary expertise' },
+  { key: 'reporting_beats', label: 'Reporting beats' },
+  { key: 'content_types', label: 'Types of content' },
+  { key: 'languages', label: 'Languages' },
+  { key: 'geographic_coverage', label: 'Geographic coverage' },
+  { key: 'biography', label: 'Short biography', multiline: true },
+  { key: 'writing_experience', label: 'Writing experience', multiline: true },
+  { key: 'investigative_experience', label: 'Investigative journalism experience', multiline: true },
+  { key: 'fact_checking_experience', label: 'Fact-checking experience', multiline: true },
+  { key: 'source_verification_experience', label: 'Source verification experience', multiline: true },
+  { key: 'topics_of_interest', label: 'Topics of interest', multiline: true },
+  { key: 'motivation_to_join', label: 'Motivation to join Katiba News', multiline: true },
+  { key: 'conflicts_of_interest', label: 'Professional conflicts of interest', multiline: true },
+  { key: 'additional_information', label: 'Additional information', multiline: true },
+]
+
 export default function NewsDashboard() {
   const [route, setRoute] = useState(window.location.pathname)
   const [access, setAccess] = useState<Access | null>(null)
@@ -30,11 +104,14 @@ export default function NewsDashboard() {
   const [categoryId, setCategoryId] = useState<number | null>(null)
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
-  const [tab, setTab] = useState<'overview' | 'stories' | 'categories'>('overview')
+  const [tab, setTab] = useState<'overview' | 'stories' | 'categories' | 'profile'>('overview')
   const [busy, setBusy] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [authorProfile, setAuthorProfile] = useState<AuthorProfile | null>(null)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileSaving, setProfileSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [featuredImage, setFeaturedImage] = useState<UploadedImage | null>(null)
   const [featuredAlt, setFeaturedAlt] = useState('')
@@ -58,6 +135,55 @@ export default function NewsDashboard() {
     void load()
     return () => { active = false }
   }, [])
+
+  useEffect(() => {
+    if (tab !== 'profile' || !access || mode !== 'writer') return
+
+    let active = true
+    setProfileLoading(true)
+    setError('')
+    setNotice('')
+
+    void api<AuthorProfile>('/api/users/author/profile/')
+      .then(profile => {
+        if (active) setAuthorProfile(profile)
+      })
+      .catch(err => {
+        if (active) {
+          setError(err instanceof Error ? err.message : 'Could not load your author profile.')
+        }
+      })
+      .finally(() => {
+        if (active) setProfileLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [tab, access, mode])
+
+  async function saveAuthorProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!authorProfile) return
+
+    setProfileSaving(true)
+    setError('')
+    setNotice('')
+
+    try {
+      const result = await api<{ message?: string; profile: AuthorProfile }>(
+        '/api/users/author/profile/',
+        'PUT',
+        authorProfile,
+      )
+      setAuthorProfile(result.profile)
+      setNotice(result.message || 'Your author profile has been updated.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save your author profile.')
+    } finally {
+      setProfileSaving(false)
+    }
+  }
 
   async function mutate(work: () => Promise<unknown>, message: string) {
     setBusy(true); setError(''); setNotice('')
@@ -111,7 +237,7 @@ export default function NewsDashboard() {
     const page = ['writer', 'editor'].includes(parts[0]) ? parts.slice(1) : parts
     const canonical = `${basePath}${page.length ? '/' + page.join('/') : ''}`
     if (route !== canonical) { window.history.replaceState(null, '', canonical); setRoute(canonical); return }
-    setTab(page[0] === 'categories' ? 'categories' : page[0] === 'stories' ? 'stories' : 'overview')
+    setTab(page[0] === 'profile' ? 'profile' : page[0] === 'categories' ? 'categories' : page[0] === 'stories' ? 'stories' : 'overview')
     if (page[0] === 'stories' && page[1]) {
       const story = stories.find(item => String(item.id) === page[1])
       if (page[1] === 'new' && mode === 'writer') fillStory(null)
@@ -156,9 +282,23 @@ export default function NewsDashboard() {
     { id: 'overview', label: '⌂ Dashboard' },
     { id: 'stories', label: mode === 'writer' ? 'My stories' : 'Submission queue' },
     { id: 'categories', label: 'Categories' },
+    ...(mode === 'writer' ? [{ id: 'profile', label: 'Profile' }] : []),
   ]} activeItem={tab} onNavigate={navigate} disabled={busy || uploading}>
-      <header className="nd-top"><form className="nd-global-search" onSubmit={event => { event.preventDefault(); navigate('stories') }}><label htmlFor="newsroom-search">Search newsroom</label><input id="newsroom-search" type="search" placeholder="Search your news, headlines, or topics…" value={search} disabled={busy || uploading} onChange={event => setSearch(event.target.value)} /><button disabled={busy || uploading} aria-label="Search news">⌕</button></form><div className="nd-account"><ThemeToggle /><b className="nd-avatar">{(access?.username || 'N').slice(0, 1).toUpperCase()}</b><span><strong>{access?.username || 'Newsroom'}</strong><small>{mode === 'writer' ? 'Author' : 'Editor'}</small></span>{access && <button disabled={busy || uploading} onClick={() => { sessionStorage.removeItem('katibaUserSession'); window.location.assign('/') }}>Sign out</button>}</div></header>
-      <nav className="nd-breadcrumbs" aria-label="Breadcrumb"><a href="/">Katiba News</a><span aria-hidden="true">/</span>{tab === 'overview' ? <span aria-current="page">Dashboard</span> : <><button disabled={busy || uploading} onClick={() => navigate('overview')}>Dashboard</button><span aria-hidden="true">/</span>{composing ? <><button disabled={busy || uploading} onClick={() => navigate('stories')}>{mode === 'writer' ? 'My stories' : 'Submission queue'}</button><span aria-hidden="true">/</span><span className="nd-current-crumb" aria-current="page">{selected?.title || 'New story'}{preview ? ' · Preview' : ''}</span></> : <span aria-current="page">{tab === 'categories' ? 'Categories' : mode === 'writer' ? 'My stories' : 'Review desk'}</span>}</>}</nav>
+      <header className="nd-top"><form className="nd-global-search" onSubmit={event => { event.preventDefault(); navigate('stories') }}><label htmlFor="newsroom-search">Search newsroom</label><input id="newsroom-search" type="search" placeholder="Search your news, headlines, or topics…" value={search} disabled={busy || uploading} onChange={event => setSearch(event.target.value)} /><button disabled={busy || uploading} aria-label="Search news">⌕</button></form><div className="nd-account"><ThemeToggle /><button
+  type="button"
+  className="nd-account-profile"
+  aria-label="Open your author profile"
+  title="View your profile"
+  disabled={busy || uploading || mode !== 'writer'}
+  onClick={() => navigate('profile')}
+>
+  <b className="nd-avatar">{(access?.username || 'N').slice(0, 1).toUpperCase()}</b>
+  <span>
+    <strong>{access?.username || 'Newsroom'}</strong>
+    <small>{mode === 'writer' ? 'Author · View profile' : 'Editor'}</small>
+  </span>
+</button>{access && <button disabled={busy || uploading} onClick={() => { sessionStorage.removeItem('katibaUserSession'); window.location.assign('/') }}>Sign out</button>}</div></header>
+      <nav className="nd-breadcrumbs" aria-label="Breadcrumb"><a href="/">Katiba News</a><span aria-hidden="true">/</span>{tab === 'overview' ? <span aria-current="page">Dashboard</span> : <><button disabled={busy || uploading} onClick={() => navigate('overview')}>Dashboard</button><span aria-hidden="true">/</span>{composing ? <><button disabled={busy || uploading} onClick={() => navigate('stories')}>{mode === 'writer' ? 'My stories' : 'Submission queue'}</button><span aria-hidden="true">/</span><span className="nd-current-crumb" aria-current="page">{selected?.title || 'New story'}{preview ? ' · Preview' : ''}</span></> : <span aria-current="page">{tab === 'profile' ? 'Profile' : tab === 'categories' ? 'Categories' : mode === 'writer' ? 'My stories' : 'Review desk'}</span>}</>}</nav>
       {loading ? <p role="status">Loading your dashboard…</p> : <>
         <div className="nd-heading"><div><p className="nd-eyebrow">{mode === 'writer' ? 'YOUR WORDS, YOUR WORKSPACE' : 'THE EDITORIAL DESK'}</p><h1>{composing ? (mode === 'editor' ? selected?.status === 'submitted' ? 'Review submission' : 'Editorial decision' : selected ? 'Edit story' : 'Create a story') : tab === 'categories' ? 'News categories' : tab === 'stories' ? (mode === 'writer' ? 'My stories' : 'Review desk') : `Welcome back, ${access?.username || 'there'}!`}</h1><p>{mode === 'writer' ? 'Write, refine, and follow your stories through review.' : 'Review submissions, refine the reporting, and make your decision.'}</p></div>{access && mode === 'writer' && !composing && tab !== 'categories' && <button className="nd-primary" disabled={busy || uploading} onClick={() => open(null)}>+ Create news</button>}</div>
         {error && <div className="nd-error" role="alert">{error}</div>}
@@ -176,6 +316,73 @@ export default function NewsDashboard() {
               <section className="nd-panel"><h2>Story pipeline</h2><div className="nd-pipeline">{statuses.filter(status => mode === 'writer' || status !== 'draft').map(status => <button key={status} onClick={() => { setFilter(status); navigate('stories') }}><span>{status === 'submitted' ? 'In review' : status === 'rejected' ? 'Needs changes' : status}<strong>{scoped.filter(story => story.status === status).length}</strong></span><meter aria-label={`${status} stories`} min={0} max={Math.max(1, scoped.length)} value={scoped.filter(story => story.status === status).length} /></button>)}</div><h3>Keep your newsroom moving</h3><p>{mode === 'writer' ? 'Save a draft, refine your reporting, then submit it to the editorial desk.' : 'Open a submission to edit the story, preview it, and approve it or return it with feedback.'}</p><div className="nd-workspace-summary"><strong>{categories.length}</strong><span>categories to keep reporting organised</span></div></section>
             </div>}
             {tab === 'overview' && mode === 'editor' && <div className="nd-editor-overview"><EditorDesk stories={scoped} categories={categories} filter={filter} onFilter={setFilter} search={search} onSearch={setSearch} onOpen={story => open(stories.find(item => item.id === story.id)!)} disabled={busy || uploading} overview /><aside className="nd-panel nd-editor-mission"><p className="nd-eyebrow">THE EDITORIAL DESK</p><h2>Quality before approval</h2><p>Writers create the reporting. You verify, refine, and decide whether a submission is ready.</p><button className="nd-primary" onClick={() => { setFilter('submitted'); navigate('stories') }}>Open submission queue →</button><h3>Manage the newsroom</h3><button className="nd-quick-link" onClick={() => navigate('categories')}>Manage news categories →</button><p className="nd-hint">Approval records your editorial decision. It does not publish the story to the articles app.</p></aside></div>}
+            {tab === 'profile' && mode === 'writer' && <section className="nd-panel nd-profile-panel">
+              <div className="nd-panel-heading">
+                <div>
+                  <h2>Your author profile</h2>
+                  <p>View and update the information saved during registration.</p>
+                </div>
+                {authorProfile && <span className="nd-profile-status">
+                  {authorProfile.onboarding_complete ? 'Profile complete' : 'Profile incomplete'}
+                </span>}
+              </div>
+
+              {profileLoading ? <p role="status">Loading your profile…</p> : !authorProfile ? (
+                <p>Your profile could not be loaded. Check the error message above and try again.</p>
+              ) : (
+                <form className="nd-profile-form" onSubmit={saveAuthorProfile}>
+                  <div className="nd-profile-grid">
+                    {authorProfileFields.map(field => (
+                      <label
+                        className={`nd-profile-field${field.multiline ? ' wide' : ''}`}
+                        key={field.key}
+                      >
+                        {field.label}
+                        {field.multiline ? (
+                          <textarea
+                            rows={4}
+                            value={authorProfile[field.key] ?? ''}
+                            onChange={event => setAuthorProfile(current => current ? {
+                              ...current,
+                              [field.key]: event.target.value,
+                            } : current)}
+                          />
+                        ) : (
+                          <input
+                            type={field.type || 'text'}
+                            required={field.key === 'professional_title' || field.key === 'location'}
+                            value={authorProfile[field.key] ?? ''}
+                            onChange={event => setAuthorProfile(current => current ? {
+                              ...current,
+                              [field.key]: event.target.value,
+                            } : current)}
+                          />
+                        )}
+                      </label>
+                    ))}
+                  </div>
+
+                  <label className="nd-profile-agreement">
+                    <input
+                      type="checkbox"
+                      checked={authorProfile.editorial_standards_agreement}
+                      onChange={event => setAuthorProfile(current => current ? {
+                        ...current,
+                        editorial_standards_agreement: event.target.checked,
+                      } : current)}
+                    />
+                    I agree to follow Katiba News editorial, accuracy, and fact-checking standards.
+                  </label>
+
+                  <div className="nd-actions">
+                    <button className="nd-primary" type="submit" disabled={profileSaving || busy}>
+                      {profileSaving ? 'Saving profile…' : 'Save profile changes'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </section>}
+
             {composing && <section className="nd-panel nd-compose"><div className="nd-compose-status"><span className={`nd-badge nd-${selected?.status || 'draft'}`}>{selected?.status || 'New draft'}</span><span>{dirty || (!selected && (title || content)) ? 'Unsaved changes' : selected ? 'Saved story' : 'Start your draft'}</span><span>{new DOMParser().parseFromString(content, 'text/html').body.textContent?.trim().split(/\s+/).filter(Boolean).length || 0} words</span></div><div className="nd-panel-heading"><h2>{selected ? editable ? 'Edit story' : 'Story details' : 'Create a news draft'}</h2><div className="nd-actions"><button type="button" disabled={uploading} onClick={() => setPreview(!preview)}>{preview ? 'Back to editing' : 'Preview story'}</button><button disabled={busy || uploading} onClick={() => navigate('stories')}>← Back to stories</button></div></div>
               {preview ? <article className="nd-story-preview"><p className="nd-eyebrow">{categories.find(item => String(item.id) === category)?.name}</p><h1>{title || 'Untitled story'}</h1><p>By {selected?.author_username || access.username}</p>{featuredImage && <figure><NewsImage src={featuredImage.url} alt={featuredAlt} />{featuredCaption && <figcaption>{featuredCaption}</figcaption>}</figure>}<RichTextEditor key={`preview-${selected?.id || 'new'}`} value={content} editable={false} /></article> : <form onSubmit={save}><fieldset disabled={busy || uploading || !editable}><label>Headline<input required maxLength={255} value={title} onChange={e => setTitle(e.target.value)} placeholder="Give your story a clear headline" /></label><label>Category<select aria-label="Category" required value={category} onChange={e => setCategory(e.target.value)}><option value="">Select a category</option>{categories.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>{editable && <div className="nd-create-category"><button type="button" onClick={() => setAddingCategory(!addingCategory)}>+ Add category</button>{addingCategory && <div className="nd-actions"><label>New category name<input maxLength={100} value={newCategoryName} onChange={event => setNewCategoryName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void addCategoryToStory() } }} /></label><button type="button" disabled={!newCategoryName.trim() || busy} onClick={() => void addCategoryToStory()}>Create category</button><button type="button" onClick={() => setAddingCategory(false)}>Cancel</button></div>}</div>}<FeaturedImage image={featuredImage} alt={featuredAlt} caption={featuredCaption} editable={!!editable} onImage={setFeaturedImage} onAlt={setFeaturedAlt} onCaption={setFeaturedCaption} onBusy={setUploading} /><div><p className="nd-field-label">Story</p><RichTextEditor key={selected?.id || 'new'} value={content} editable={!!editable} disabled={busy || uploading} onChange={setContent} onBusy={setUploading} /></div></fieldset>
                 {!categories.length && <p>Add a category above before saving your story.</p>}

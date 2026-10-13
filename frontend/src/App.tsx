@@ -250,7 +250,7 @@ const [editorialStandardsAgreement, setEditorialStandardsAgreement] = useState(f
 const [additionalInformation, setAdditionalInformation] = useState('')
 const [onboardingStep, setOnboardingStep] = useState(1)
   const totalOnboardingSteps = 6
-  const [journeyStage, setJourneyStage] = useState(1)
+  const [, setJourneyStage] = useState(1)
 
 const nextOnboardingStep = () => {
   setOnboardingStep((step) =>
@@ -364,7 +364,7 @@ const [message, setMessage] = useState('')
 if (account.profile_complete) {
       setJourneyStage(4)
       setJourneyStage(2)
-    setMessage('Profile submitted successfully. Your author profile is complete.')
+    window.location.assign('/news/dashboard')
     } else {
       setJourneyStage(2)
       setOnboardingStep(1)
@@ -656,7 +656,6 @@ if (!savedSession) {
   }
 
   if (view === 'onboarding') {
-    const profileStage = 2
 
 
     return (
