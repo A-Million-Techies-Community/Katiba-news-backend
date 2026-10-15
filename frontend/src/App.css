@@ -4742,3 +4742,409 @@ a {
   color: #ffffff !important;
 }
 
+
+/* AUTHOR ONBOARDING — MATCH EXISTING NEWS DASHBOARD */
+.author-journey-page {
+  --author-bg: #26343a !important;
+  --author-white: #1d2b34 !important;
+  --author-dark: #102a2b !important;
+  --author-teal: #008f74 !important;
+  --author-green: #42e7bb !important;
+  --author-text: #dce7eb !important;
+  --author-muted: #9aadb4 !important;
+  --author-border: #30454e !important;
+  --author-soft: #20343a !important;
+
+  background: #26343a !important;
+  color: #dce7eb !important;
+}
+
+/* Header and footer use the dashboard's deep teal */
+.author-journey-page .journey-header,
+.author-journey-page .journey-footer {
+  background: #102a2b !important;
+  color: #dce7eb !important;
+  border-color: #294144 !important;
+  box-shadow: none !important;
+}
+
+.author-journey-page .journey-logo,
+.author-journey-page .journey-logo strong,
+.author-journey-page .journey-header-copy strong,
+.author-journey-page .journey-footer strong {
+  color: #e1ebee !important;
+}
+
+.author-journey-page .journey-logo span,
+.author-journey-page .journey-header-copy small,
+.author-journey-page .journey-footer > span {
+  color: #a1b4b8 !important;
+}
+
+.author-journey-page .journey-header-copy > span,
+.author-journey-page .stage-kicker,
+.author-journey-page .profile-form-heading > span,
+.author-journey-page .account-form-heading > span {
+  color: #42e7bb !important;
+}
+
+/* Dark dashboard-style page background */
+.author-journey-page .journey-body {
+  background: linear-gradient(120deg, #26343a, #354448) !important;
+  color: #dce7eb !important;
+}
+
+.author-journey-page .account-stage,
+.author-journey-page .profile-layout,
+.author-journey-page .verification-layout,
+.author-journey-page .resources-layout {
+  background: transparent !important;
+  color: #dce7eb !important;
+}
+
+.author-journey-page .account-stage-copy h1,
+.author-journey-page .profile-sidebar h1,
+.author-journey-page .verification-copy h1,
+.author-journey-page .resources-main h1 {
+  color: #e0eaed !important;
+}
+
+.author-journey-page .account-stage-copy p,
+.author-journey-page .profile-sidebar p,
+.author-journey-page .verification-copy p,
+.author-journey-page .resources-main p {
+  color: #a4b6bd !important;
+}
+
+/* Dark cards like the dashboard's statistic and story cards */
+.author-journey-page .account-form,
+.author-journey-page .profile-form,
+.author-journey-page .verification-form,
+.author-journey-page .resource-card,
+.author-journey-page .pitch-card {
+  background: #1d2b34 !important;
+  color: #dce7eb !important;
+  border: 1px solid #30454e !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .12) !important;
+}
+
+.author-journey-page .account-form-heading h2,
+.author-journey-page .profile-form-heading h2,
+.author-journey-page .resource-card h2,
+.author-journey-page .pitch-card h2 {
+  color: #e0eaed !important;
+}
+
+.author-journey-page .account-form-heading p,
+.author-journey-page .profile-form-heading p,
+.author-journey-page .resource-card p,
+.author-journey-page .pitch-card p {
+  color: #9aadb4 !important;
+}
+
+/* Labels and form controls */
+.author-journey-page label {
+  color: #d7e3e6 !important;
+}
+
+.author-journey-page input,
+.author-journey-page textarea,
+.author-journey-page select {
+  background: #263740 !important;
+  color: #e0eaed !important;
+  border: 1px solid #3b5059 !important;
+}
+
+.author-journey-page input::placeholder,
+.author-journey-page textarea::placeholder {
+  color: #91a4ac !important;
+  opacity: 1 !important;
+}
+
+.author-journey-page input:focus,
+.author-journey-page textarea:focus,
+.author-journey-page select:focus {
+  border-color: #00a985 !important;
+  box-shadow: 0 0 0 3px rgba(0, 169, 133, .16) !important;
+  outline: none !important;
+}
+
+/* Bright green primary actions */
+.author-journey-page .account-submit {
+  background: #008f74 !important;
+  color: #ffffff !important;
+  border: 1px solid #008f74 !important;
+}
+
+.author-journey-page .account-submit:hover {
+  background: #00a985 !important;
+  border-color: #00a985 !important;
+  color: #ffffff !important;
+}
+
+/* Secondary actions */
+.author-journey-page .journey-back,
+.author-journey-page .profile-back {
+  background: transparent !important;
+  color: #dce7eb !important;
+  border: 1px solid #60757a !important;
+}
+
+.author-journey-page .journey-back:hover,
+.author-journey-page .profile-back:hover {
+  background: #174b43 !important;
+  border-color: #00a985 !important;
+}
+
+/* Account mode tabs */
+.author-journey-page .account-mode {
+  background: #17272e !important;
+  border: 1px solid #30454e !important;
+}
+
+.author-journey-page .account-mode button {
+  color: #9aadb4 !important;
+}
+
+.author-journey-page .account-mode button.active {
+  background: #008f74 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+/* Profile navigation */
+.author-journey-page .profile-sidebar {
+  background: #102a2b !important;
+  color: #dce7eb !important;
+}
+
+.author-journey-page .profile-substeps button {
+  color: #b7c6cb !important;
+  border-color: #294144 !important;
+}
+
+.author-journey-page .profile-substeps button span {
+  background: #20383a !important;
+  color: #dce7eb !important;
+}
+
+.author-journey-page .profile-substeps button.active {
+  background: #005b4c !important;
+  border-color: #008f74 !important;
+  color: #ffffff !important;
+}
+
+.author-journey-page .profile-substeps button.active span {
+  background: #00a985 !important;
+  color: #ffffff !important;
+}
+
+/* Progress and journey indicators */
+.author-journey-page .journey-progress-label,
+.author-journey-page .journey-progress-label span,
+.author-journey-page .journey-progress-label strong {
+  color: #dce7eb !important;
+}
+
+.author-journey-page .journey-progress-track {
+  background: #3a4b50 !important;
+}
+
+.author-journey-page .journey-progress-fill {
+  background: #00b88c !important;
+}
+
+/* Footer journey labels */
+.author-journey-page .journey-footer-steps span {
+  color: #879da3 !important;
+}
+
+.author-journey-page .journey-footer-steps span.active {
+  color: #42e7bb !important;
+}
+
+/* Informational messages and links */
+.author-journey-page .account-message {
+  background: #183b35 !important;
+  color: #8ef0cf !important;
+  border-color: #28675a !important;
+}
+
+.author-journey-page a {
+  color: #42e7bb !important;
+}
+
+@media (max-width: 760px) {
+  .author-journey-page .journey-header,
+  .author-journey-page .journey-footer {
+    background: #102a2b !important;
+  }
+
+  .author-journey-page .account-form,
+  .author-journey-page .profile-form {
+    background: #1d2b34 !important;
+    box-shadow: none !important;
+  }
+}
+
+
+/* Match onboarding form fields to the existing author dashboard */
+.author-journey-page .account-form input:not([type="checkbox"]):not([type="radio"]),
+.author-journey-page .account-form textarea,
+.author-journey-page .account-form select,
+.author-journey-page .profile-form input:not([type="checkbox"]):not([type="radio"]),
+.author-journey-page .profile-form textarea,
+.author-journey-page .profile-form select {
+  background-color: #263740 !important;
+  color: #e0eaed !important;
+  border: 1px solid #3b5059 !important;
+  caret-color: #42e7bb !important;
+  color-scheme: dark;
+  box-shadow: none !important;
+}
+
+.author-journey-page .account-form input::placeholder,
+.author-journey-page .account-form textarea::placeholder,
+.author-journey-page .profile-form input::placeholder,
+.author-journey-page .profile-form textarea::placeholder {
+  color: #91a4ac !important;
+  opacity: 1 !important;
+}
+
+/* Prevent Chrome autofill from turning fields white or pale blue */
+.author-journey-page .account-form input:-webkit-autofill,
+.author-journey-page .account-form input:-webkit-autofill:hover,
+.author-journey-page .account-form input:-webkit-autofill:focus,
+.author-journey-page .profile-form input:-webkit-autofill,
+.author-journey-page .profile-form input:-webkit-autofill:hover,
+.author-journey-page .profile-form input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #e0eaed !important;
+  -webkit-box-shadow: 0 0 0 1000px #263740 inset !important;
+  box-shadow: 0 0 0 1000px #263740 inset !important;
+  border: 1px solid #3b5059 !important;
+  caret-color: #42e7bb !important;
+}
+
+.author-journey-page .account-form input:focus,
+.author-journey-page .account-form textarea:focus,
+.author-journey-page .account-form select:focus,
+.author-journey-page .profile-form input:focus,
+.author-journey-page .profile-form textarea:focus,
+.author-journey-page .profile-form select:focus {
+  background-color: #263740 !important;
+  color: #e0eaed !important;
+  border-color: #00a985 !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(0, 169, 133, .16) !important;
+}
+
+
+/* Make registration and username/email errors clearly readable */
+.author-journey-page .account-message {
+  display: block !important;
+  background: #172f32 !important;
+  color: #f1f7f8 !important;
+  border: 1px solid #42e7bb !important;
+  border-radius: 8px !important;
+  padding: 14px 16px !important;
+  margin-top: 14px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.7 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+  opacity: 1 !important;
+}
+
+.author-journey-page .account-message *,
+.author-journey-page .account-message::before,
+.author-journey-page .account-message::after {
+  color: #f1f7f8 !important;
+  opacity: 1 !important;
+}
+
+
+/* FIX LOW-CONTRAST TEXT IN THE AUTHOR PROFILE QUESTIONNAIRE */
+.author-journey-page .profile-form label,
+.author-journey-page .profile-form label[for],
+.author-journey-page .profile-form .checkbox-row,
+.author-journey-page .profile-form .checkbox-row span,
+.author-journey-page .profile-form-heading label {
+  color: #dce7eb !important;
+  opacity: 1 !important;
+}
+
+/* Keep questionnaire titles clearly visible */
+.author-journey-page .profile-form-heading h2,
+.author-journey-page .profile-form h2,
+.author-journey-page .profile-form h3 {
+  color: #e4eef1 !important;
+  opacity: 1 !important;
+}
+
+/* Make supporting descriptions readable */
+.author-journey-page .profile-form p,
+.author-journey-page .profile-form small,
+.author-journey-page .profile-form .help-text {
+  color: #aebfc5 !important;
+  opacity: 1 !important;
+}
+
+/* Make every field legible against the dark card */
+.author-journey-page .profile-form input:not([type="checkbox"]),
+.author-journey-page .profile-form textarea,
+.author-journey-page .profile-form select {
+  background-color: #263740 !important;
+  color: #edf5f7 !important;
+  border: 1px solid #435861 !important;
+  opacity: 1 !important;
+}
+
+.author-journey-page .profile-form input::placeholder,
+.author-journey-page .profile-form textarea::placeholder {
+  color: #a6b7bd !important;
+  opacity: 1 !important;
+}
+
+.author-journey-page .profile-form input:focus,
+.author-journey-page .profile-form textarea:focus,
+.author-journey-page .profile-form select:focus {
+  border-color: #42e7bb !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(66, 231, 187, .15) !important;
+}
+
+/* Ensure validation and status messages remain readable */
+.author-journey-page .profile-form .account-message {
+  background: #173b35 !important;
+  color: #effff9 !important;
+  border: 1px solid #287762 !important;
+  opacity: 1 !important;
+}
+
+
+/* Make signup and signin status messages readable on dark cards */
+.author-journey-page .account-form .account-message,
+.author-journey-page .account-form p.account-message {
+  display: block !important;
+  background: #173b35 !important;
+  color: #eafff8 !important;
+  -webkit-text-fill-color: #eafff8 !important;
+  border: 1px solid #42e7bb !important;
+  border-radius: 8px !important;
+  padding: 14px 16px !important;
+  margin-top: 14px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.7 !important;
+  opacity: 1 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.author-journey-page .account-form .account-message * {
+  color: #eafff8 !important;
+  -webkit-text-fill-color: #eafff8 !important;
+  opacity: 1 !important;
+}
+
