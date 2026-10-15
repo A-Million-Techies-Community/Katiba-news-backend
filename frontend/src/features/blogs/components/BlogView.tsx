@@ -1,177 +1,397 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
-interface BlogPost {
+interface BlogItem {
   id: number;
-  title: string;
-  slug: string;
+  title?: string;
+  slug?: string;
   content: string;
-  author_username: string;
-  likes_count: number;
-  created_at: string;
+  author_username?: string;
+  likes_count?: number;
+  created_at?: string;
 }
 
-export const BlogView: React.FC = () => {
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [commentText, setCommentText] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [apiMessage, setApiMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+interface BlogViewProps {
+  onBackToDashboard?: () => void;
+  onNavigateToArticles?: () => void;
+}
 
-  async function fetchBlogPosts() {
+const extractList = (data: any): any[] => {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.results)) return data.results;
+  return [];
+};
+
+export const BlogView: React.FC<BlogViewProps> = ({ onBackToDashboard, onNavigateToArticles }) => {
+  const [blogs, setBlogs] = useState<BlogItem[]>([]);
+  const [postText, setPostText] = useState('');
+  const [postTitle, setPostTitle] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const fetchBlogs = async () => {
+    setIsLoading(true);
     try {
-      const response = await fetch('/api/blogs/');
-      if (response.ok) {
-        const data = await response.json();
-        setPosts(data);
+      const res = await fetch('/api/blogs/?page_size=100');
+      if (res.ok) {
+        const data = await res.json();
+        setBlogs(extractList(data));
       }
-    } catch {
-      console.error('Failed to update conversation threads.');
+    } catch (err) {
+      console.error('Failed to fetch blogs:', err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchBlogPosts();
+    fetchBlogs();
   }, []);
 
-  async function handleCommentSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    if (!commentText.trim()) {
-      setApiMessage('Validation Error: Input space cannot be blank.');
-      return;
-    }
+  const handlePublishPost = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!postText.trim()) return;
 
     setIsSubmitting(true);
-    setApiMessage('');
+    setMessage(null);
 
     try {
       const sessionData = sessionStorage.getItem('katibaUserSession');
-      let accessToken = '';
+      let token = '';
+      let username = 'Guest Author';
+
       if (sessionData) {
-        const parsed = JSON.parse(sessionData);
-        accessToken = parsed.access || '';
+        try {
+          const parsed = JSON.parse(sessionData);
+          token = parsed.access || '';
+          username = parsed.username || 'Abdube Dida';
+        } catch {
+          // Fallback if session parsing fails
+        }
       }
 
-      const response = await fetch('/api/blogs/', {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const titleValue = postTitle.trim() || 'Community Discussion';
+      // Auto-generate URL-friendly slug required by Django BlogPost models
+      const slugValue =
+        titleValue
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)+/g, '') || `post-${Date.now()}`;
+
+      const payload = {
+        title: titleValue,
+        slug: slugValue,
+        content: postText.trim(),
+        author_username: username,
+      };
+
+      const res = await fetch('/api/blogs/', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
-        },
-        body: JSON.stringify({ title: "Civic Voice Thread", content: commentText }),
+        headers,
+        body: JSON.stringify(payload),
       });
 
-      await response.json();
+      if (res.ok) {
+        const savedBlog = await res.json().catch(() => null);
+        setPostText('');
+        setPostTitle('');
+        setMessage({ type: 'success', text: 'Blog post published successfully!' });
 
-      if (!response.ok) {
-        setApiMessage(`Access Blocked: Make sure you are signed in.`);
-        return;
+        if (savedBlog && savedBlog.id) {
+          setBlogs((prev) => [savedBlog, ...prev]);
+        } else {
+          fetchBlogs();
+        }
+      } else {
+        // Parse exact Django error messages (e.g., missing author, bad slug, unauthenticated)
+        let errorDetails = '';
+        try {
+          const errData = await res.json();
+          if (typeof errData === 'object' && errData !== null) {
+            errorDetails = Object.entries(errData)
+              .map(([key, val]) => `${key}: ${Array.isArray(val) ? val.join(', ') : val}`)
+              .join(' | ');
+          }
+        } catch {
+          errorDetails = `HTTP ${res.status} ${res.statusText}`;
+        }
+
+        setMessage({
+          type: 'error',
+          text: `Database Error (${res.status}): ${errorDetails || 'Failed to save post to Django database.'}`,
+        });
       }
-
-      setApiMessage('Success: Your civic perspective has been added live to the feed!');
-      setCommentText('');
-      fetchBlogPosts();
-    } catch {
-      setApiMessage('Network Failure: Unable to establish contact with the server.');
+    } catch (err) {
+      console.error('Error posting blog:', err);
+      setMessage({
+        type: 'error',
+        text: 'Could not connect to Django backend server. Please check your API connection.',
+      });
     } finally {
       setIsSubmitting(false);
     }
-  }
+  };
 
-  async function handleLikeClick(slug: string) {
-    try {
-      const sessionData = sessionStorage.getItem('katibaUserSession');
-      let accessToken = '';
-      if (sessionData) {
-        const parsed = JSON.parse(sessionData);
-        accessToken = parsed.access || '';
-      }
-
-      const response = await fetch(`/api/blogs/${slug}/like/`, {
-        method: 'POST',
-        headers: {
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {})
-        }
-      });
-
-      if (response.ok) {
-        fetchBlogPosts();
-      }
-    } catch {
-      console.error('Could not toggle interaction parameters.');
-    }
-  }
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return 'Just now';
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return 'Recently';
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
 
   return (
-    <div style={{ maxWidth: '900px', margin: '40px auto', padding: '0 20px', fontFamily: 'sans-serif', color: '#0f172a' }}>
-      
-      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '16px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '2px', color: '#64748b', textTransform: 'uppercase', fontFamily: 'monospace' }}>
-          Public Discussion Forum / Citizen Voice
+    <div style={{ maxWidth: '1000px', margin: '0 auto', fontFamily: 'system-ui, sans-serif' }}>
+      {/* Header */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '20px',
+        }}
+      >
+        <div>
+          <h1 style={{ fontSize: '28px', fontWeight: '800', margin: 0, color: '#0f172a' }}>
+            Blogs & Public Discussion
+          </h1>
+          <p style={{ color: '#64748b', fontSize: '14px', marginTop: '6px' }}>
+            Share commentary, read citizen perspectives, and participate in community dialogues.
+          </p>
         </div>
-        <div style={{ fontSize: '11px', fontFamily: 'monospace', color: '#475569', backgroundColor: '#f1f5f9', border: '1px solid #e2e8f0', padding: '4px 10px', borderRadius: '6px' }}>
-          Active Threads: {posts.length}
-        </div>
+
+        {onBackToDashboard && (
+          <button
+            onClick={onBackToDashboard}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              background: '#ffffff',
+              color: '#334155',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '13px',
+            }}
+          >
+            ← Back to Dashboard
+          </button>
+        )}
       </div>
 
-      <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '32px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', marginBottom: '40px' }}>
-        <form onSubmit={handleCommentSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#0f172a', marginBottom: '10px', fontFamily: 'monospace' }}>
-              Start an Opinion Thread or Post Public Feedback
-            </label>
-            <textarea 
-              placeholder="Share an articulate thought perspective regarding constitutional amendments..."
-              rows={3}
-              style={{ width: '100%', padding: '16px', border: '1px solid #cbd5e1', borderRadius: '12px', fontSize: '14px', boxSizing: 'border-box', backgroundColor: '#f8fafc', resize: 'none', lineHeight: '1.5' }}
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-            />
-          </div>
+      {/* Post Editor Card */}
+      <div
+        style={{
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          padding: '24px',
+          marginBottom: '28px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        }}
+      >
+        <div
+          style={{
+            fontSize: '11px',
+            fontWeight: '800',
+            letterSpacing: '0.5px',
+            color: '#475569',
+            marginBottom: '12px',
+          }}
+        >
+          START A DISCUSSION OR SHARE FEEDBACK
+        </div>
 
-          {apiMessage && (
-            <div style={{ padding: '12px', borderRadius: '10px', fontSize: '13px', fontWeight: '500', backgroundColor: apiMessage.startsWith('Success') ? '#f0fdf4' : '#fef2f2', color: apiMessage.startsWith('Success') ? '#166534' : '#991b1b', border: apiMessage.startsWith('Success') ? '1px solid #bbf7d0' : '1px solid #fecaca' }}>
-              {apiMessage}
+        <form onSubmit={handlePublishPost}>
+          <input
+            type="text"
+            placeholder="Title / Topic (Optional)"
+            value={postTitle}
+            onChange={(e) => setPostTitle(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              marginBottom: '12px',
+              fontSize: '14px',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
+
+          <textarea
+            rows={4}
+            placeholder="Type your commentary or civic post here..."
+            value={postText}
+            onChange={(e) => setPostText(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 14px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              fontSize: '14px',
+              outline: 'none',
+              resize: 'vertical',
+              boxSizing: 'border-box',
+              fontFamily: 'inherit',
+            }}
+          />
+
+          {message && (
+            <div
+              style={{
+                marginTop: '12px',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '600',
+                background: message.type === 'success' ? '#f0fdf4' : '#fef2f2',
+                color: message.type === 'success' ? '#166534' : '#991b1b',
+                border: `1px solid ${message.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
+              }}
+            >
+              {message.text}
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-            <p style={{ fontSize: '11px', color: '#64748b', margin: 0, maxWidth: '400px', lineHeight: '1.4' }}>Keep submissions civic, precise, and focused on institutional framework reviews.</p>
-            <button type="submit" disabled={isSubmitting} style={{ backgroundColor: '#0f172a', color: '#ffffff', border: 'none', padding: '12px 24px', borderRadius: '10px', fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', cursor: 'pointer', opacity: isSubmitting ? 0.5 : 1, fontFamily: 'monospace' }}>
-              {isSubmitting ? 'Posting...' : 'Deploy Voice Node'}
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: '16px',
+            }}
+          >
+            <span style={{ fontSize: '11px', color: '#94a3b8' }}>
+              Submissions should remain constructive, respectful, and focused on community engagement.
+            </span>
+
+            <button
+              type="submit"
+              disabled={isSubmitting || !postText.trim()}
+              style={{
+                backgroundColor: postText.trim() ? '#006f64' : '#94a3b8',
+                color: '#ffffff',
+                border: 'none',
+                padding: '10px 22px',
+                borderRadius: '8px',
+                fontWeight: '700',
+                fontSize: '13px',
+                cursor: postText.trim() ? 'pointer' : 'not-allowed',
+                transition: 'background 0.2s ease',
+              }}
+            >
+              {isSubmitting ? 'Publishing...' : 'Publish Post →'}
             </button>
           </div>
         </form>
       </div>
 
-      {/* Live Active Community Thread Timeline Feed Stream */}
-      {loading ? (
-        <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '2px', fontFamily: 'monospace' }}>Synchronizing community conversations...</div>
-      ) : posts.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-          <p style={{ fontSize: '14px', color: '#64748b', fontStyle: 'italic', margin: 0, fontFamily: 'serif' }}>No community dialogues have been registered on the server yet.</p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {posts.map((post) => (
-            <div key={post.id} style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
-              <div style={{ display: 'flex', gap: '8px', fontSize: '10px', color: '#94a3b8', fontFamily: 'monospace', marginBottom: '12px' }}>
-                <span style={{ backgroundColor: '#f1f5f9', color: '#334155', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>User: {post.author_username || 'Citizen'}</span>
-                <span>•</span>
-                <span>{new Date(post.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-              </div>
-              <p style={{ fontSize: '15px', lineHeight: '1.6', color: '#1e293b', margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'serif' }}>{post.content}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
-                <button type="button" onClick={() => handleLikeClick(post.slug)} style={{ background: 'none', border: 'none', padding: 0, fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase', color: '#64748b', cursor: 'pointer', fontFamily: 'monospace' }}>♡ Upvote Insight</button>
-                <div style={{ width: '1px', height: '12px', backgroundColor: '#e2e8f0' }}></div>
-                <span style={{ fontSize: '11px', color: '#64748b', fontFamily: 'monospace' }}>Support Tally: <strong style={{ color: '#0f172a' }}>{post.likes_count}</strong></span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Blog Feed */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {isLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: '#64748b' }}>
+            Loading community posts...
+          </div>
+        ) : blogs.length === 0 ? (
+          <div
+            style={{
+              textAlign: 'center',
+              padding: '40px',
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              color: '#64748b',
+              fontSize: '14px',
+            }}
+          >
+            No community posts have been published yet. Be the first to start a conversation!
+          </div>
+        ) : (
+          blogs.map((blog) => (
+            <div
+              key={blog.id}
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '20px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.03)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '10px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div
+                    style={{
+                      width: '30px',
+                      height: '30px',
+                      borderRadius: '50%',
+                      background: '#006f64',
+                      color: '#ffffff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                    }}
+                  >
+                    {(blog.author_username || 'A')[0].toUpperCase()}
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#0f172a' }}>
+                      {blog.author_username || 'Anonymous'}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#94a3b8', marginLeft: '8px' }}>
+                      {formatDate(blog.created_at)}
+                    </span>
+                  </div>
+                </div>
 
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    background: '#f1f5f9',
+                    color: '#475569',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                  }}
+                >
+                  ❤️ {blog.likes_count || 0} Likes
+                </span>
+              </div>
+
+              {blog.title && blog.title !== 'Community Discussion' && (
+                <h3 style={{ margin: '0 0 8px', fontSize: '16px', color: '#1e293b' }}>
+                  {blog.title}
+                </h3>
+              )}
+
+              <p style={{ margin: 0, fontSize: '14px', color: '#334155', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                {blog.content}
+              </p>
+            </div>
+          ))
+        )}
+      </div>
     </div>
   );
 };

@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
-import { ArticleReader } from './features/articles/components/ArticleReader'
-import { ArticleEditor } from './features/articles/components/ArticleEditor'
-import { BlogView } from './features/blogs/components/BlogView'
 
 type Role = 'Author'
 type Mode = 'signin' | 'signup'
@@ -1339,11 +1336,7 @@ if (!savedSession) {
               {filteredLatest.length === 0 && <p>No headlines match your search.</p>}
             </div>
           </div>
-          <section className="max-w-6xl mx-auto px-4 py-12 space-y-16 border-t border-slate-100 mt-12">
-            <ArticleReader />
-            <ArticleEditor />
-            <BlogView />
-          </section>
+          
         </section>
 
         <section className="content-section" id="guest-analysis">

@@ -20,4 +20,5 @@ class BlogPostSerializer(serializers.ModelSerializer):
     class Meta:
         model = BlogPost
         fields = ['id', 'title', 'slug', 'content', 'author', 'author_username', 'likes_count', 'comments', 'created_at']
-        read_only_fields = ['id', 'slug', 'likes_count', 'comments', 'created_at']
+        # Added 'author' to read_only_fields so DRF serializer validation does not require it in the POST body
+        read_only_fields = ['id', 'slug', 'author', 'likes_count', 'comments', 'created_at']
