@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { ArticleEditor } from '../articles/components/ArticleEditor';
-import { BlogView } from '../blogs/components/BlogView';
+
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { ArticleEditor } from '../articles/components/ArticleEditor'
+import { BlogView } from '../blogs/components/BlogView'
 
 type Tab =
   | 'dashboard'
@@ -11,1747 +12,2566 @@ type Tab =
   | 'media'
   | 'comments'
   | 'settings'
-  | 'profile';
+  | 'profile'
 
-interface ArticleItem {
-  id: number;
-  title: string;
-  slug?: string;
-  content?: string;
-  status?: string;
-  created_at?: string;
-  template_name?: string;
+type Session = {
+  username: string
+  role: string
+  access: string
 }
 
-interface BlogItem {
-  id: number;
-  title: string;
-  slug: string;
-  content: string;
-  author_username?: string;
-  likes_count?: number;
-  created_at?: string;
+type Article = {
+  id: number | string
+  title: string
+  slug?: string
+  content?: string
+  status?: string
+  category?: string
+  category_name?: string
+  created_at?: string
+  updated_at?: string
+  published_at?: string
+  views_count?: number
+  author_username?: string
 }
 
-interface SelectedItem {
-  type: 'article' | 'blog' | 'news';
-  title: string;
-  content: string;
-  meta: string;
-  status?: string;
+type Blog = {
+  id: number | string
+  title: string
+  slug?: string
+  content?: string
+  status?: string
+  category?: string
+  category_name?: string
+  created_at?: string
+  updated_at?: string
+  published_at?: string
+  author_username?: string
+  likes_count?: number
+  views_count?: number
 }
 
-/* =========================================================
-   ICONS
-   ========================================================= */
+type AuthorProfile = {
+  username?: string
+  first_name?: string
+  last_name?: string
+  email?: string
+  professional_title?: string
+  preferred_byline?: string
+  organisation?: string
+  location?: string
+  phone_number?: string
+  years_of_experience?: string | number
+  highest_education?: string
+  journalism_training?: string
+  previous_media_experience?: string
+  portfolio_url?: string
+  linkedin_url?: string
+  published_work?: string
+  primary_expertise?: string
+  secondary_expertise?: string
+  reporting_beats?: string
+  content_types?: string
+  languages?: string
+  geographic_coverage?: string
+  writing_experience?: string
+  investigative_experience?: string
+  fact_checking_experience?: string
+  source_verification_experience?: string
+  topics_of_interest?: string
+  motivation_to_join?: string
+  conflicts_of_interest?: string
+  additional_information?: string
+  areas_of_expertise?: string
+  biography?: string
+  [key: string]: unknown
+}
 
-const Icon = ({
-  name,
-  size = 20,
-}: {
-  name: string;
-  size?: number;
-}) => {
-  const common = {
-    width: size,
-    height: size,
-    viewBox: '0 0 24 24',
-    fill: 'none',
-    stroke: 'currentColor',
-    strokeWidth: 1.8,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  };
+type ContentRecord = Article | Blog
+type ChartPoint = { label: string; value: number; secondary?: number }
 
-  switch (name) {
-    case 'home':
-      return (
-        <svg {...common}>
-          <path d="M3 10.5 12 3l9 7.5" />
-          <path d="M5 9.5V21h14V9.5" />
-          <path d="M9 21v-6h6v6" />
-        </svg>
-      );
+const PROFILE_ENDPOINT = '/api/users/author/profile/'
+const ACCOUNT_ENDPOINT = '/api/users/me/'
+const ARTICLES_ENDPOINT = '/api/articles/?all=true&page_size=100'
+const BLOGS_ENDPOINT = '/api/blogs/?page_size=100'
+const DASHBOARD_PATH = '/author/dashboard'
 
-    case 'news':
-      return (
-        <svg {...common}>
-          <rect x="4" y="3" width="16" height="18" rx="2" />
-          <path d="M8 7h8M8 11h8M8 15h5" />
-        </svg>
-      );
+const navItems: {
+  id: Tab
+  label: string
+  icon: string
+  description: string
+}[] = [
+  { id: 'dashboard', label: 'Overview', icon: '⌂', description: 'Publishing overview' },
+  { id: 'articles', label: 'Articles', icon: '▤', description: 'Create and manage articles' },
+  { id: 'blogs', label: 'Blogs', icon: '✎', description: 'Explore blog content' },
+  { id: 'news', label: 'News', icon: '▧', description: 'News workspace' },
+  { id: 'analytics', label: 'Analytics', icon: '▥', description: 'Publishing performance' },
+  { id: 'media', label: 'Media library', icon: '▣', description: 'Manage media resources' },
+  { id: 'comments', label: 'Comments', icon: '☏', description: 'Reader conversations' },
+  { id: 'settings', label: 'Settings', icon: '⚙', description: 'Workspace settings' },
+  { id: 'profile', label: 'My profile', icon: '♙', description: 'Your saved author profile' },
+]
 
-    case 'edit':
-      return (
-        <svg {...common}>
-          <path d="m4 20 4.2-1 10-10a2 2 0 0 0-2.8-2.8l-10 10L4 20Z" />
-          <path d="m13.8 7.2 3 3" />
-        </svg>
-      );
+const validTabs = new Set<Tab>(navItems.map((item) => item.id))
 
-    case 'article':
-      return (
-        <svg {...common}>
-          <path d="M6 3h9l3 3v15H6z" />
-          <path d="M15 3v4h4M9 11h6M9 15h6M9 18h4" />
-        </svg>
-      );
+const STATUS_COLORS: Record<string, string> = {
+  published: '#159b76',
+  draft: '#7770d6',
+  under_review: '#e6a23c',
+  pending: '#e6a23c',
+  scheduled: '#3984d6',
+  archived: '#87958e',
+  rejected: '#dc6464',
+  other: '#a6b0ab',
+}
 
-    case 'analytics':
-      return (
-        <svg {...common}>
-          <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
-        </svg>
-      );
+const PROFILE_GROUPS: { title: string; fields: (keyof AuthorProfile)[] }[] = [
+  {
+    title: 'Author identity',
+    fields: [
+      'professional_title',
+      'preferred_byline',
+      'organisation',
+      'location',
+      'phone_number',
+      'email',
+      'biography',
+    ],
+  },
+  {
+    title: 'Experience and education',
+    fields: [
+      'years_of_experience',
+      'highest_education',
+      'journalism_training',
+      'previous_media_experience',
+      'writing_experience',
+    ],
+  },
+  {
+    title: 'Portfolio and professional links',
+    fields: ['portfolio_url', 'linkedin_url', 'published_work'],
+  },
+  {
+    title: 'Expertise and reporting',
+    fields: [
+      'areas_of_expertise',
+      'primary_expertise',
+      'secondary_expertise',
+      'reporting_beats',
+      'content_types',
+      'languages',
+      'geographic_coverage',
+      'topics_of_interest',
+    ],
+  },
+  {
+    title: 'Journalism practice',
+    fields: [
+      'investigative_experience',
+      'fact_checking_experience',
+      'source_verification_experience',
+      'motivation_to_join',
+      'conflicts_of_interest',
+      'additional_information',
+    ],
+  },
+]
 
-    case 'image':
-      return (
-        <svg {...common}>
-          <rect x="3" y="4" width="18" height="16" rx="2" />
-          <circle cx="8.5" cy="9" r="1.5" />
-          <path d="m21 15-5-5L5 20" />
-        </svg>
-      );
+const PROFILE_LABELS: Partial<Record<keyof AuthorProfile, string>> = {
+  professional_title: 'Professional title',
+  preferred_byline: 'Preferred byline',
+  organisation: 'Organisation',
+  location: 'Location',
+  phone_number: 'Phone number',
+  email: 'Email',
+  biography: 'Biography',
+  years_of_experience: 'Years of experience',
+  highest_education: 'Highest education',
+  journalism_training: 'Journalism training',
+  previous_media_experience: 'Previous media experience',
+  writing_experience: 'Writing experience',
+  portfolio_url: 'Portfolio / website',
+  linkedin_url: 'LinkedIn profile',
+  published_work: 'Published work',
+  areas_of_expertise: 'Areas of expertise',
+  primary_expertise: 'Primary expertise',
+  secondary_expertise: 'Secondary expertise',
+  reporting_beats: 'Reporting beats',
+  content_types: 'Content types',
+  languages: 'Languages',
+  geographic_coverage: 'Geographic coverage',
+  topics_of_interest: 'Topics of interest',
+  investigative_experience: 'Investigative experience',
+  fact_checking_experience: 'Fact-checking experience',
+  source_verification_experience: 'Source verification',
+  motivation_to_join: 'Motivation to join',
+  conflicts_of_interest: 'Conflicts of interest',
+  additional_information: 'Additional information',
+}
 
-    case 'comment':
-      return (
-        <svg {...common}>
-          <path d="M20 11.5a7 7 0 0 1-7 7H8l-4 3v-5.2a7 7 0 1 1 16-4.8Z" />
-        </svg>
-      );
+const LONG_TEXT_FIELDS = new Set<keyof AuthorProfile>([
+  'biography',
+  'published_work',
+  'journalism_training',
+  'previous_media_experience',
+  'writing_experience',
+  'areas_of_expertise',
+  'primary_expertise',
+  'secondary_expertise',
+  'reporting_beats',
+  'content_types',
+  'languages',
+  'geographic_coverage',
+  'topics_of_interest',
+  'investigative_experience',
+  'fact_checking_experience',
+  'source_verification_experience',
+  'motivation_to_join',
+  'conflicts_of_interest',
+  'additional_information',
+])
 
-    case 'settings':
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-1.7 1.7-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5v.2h-2.4v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1L8 17l.1-.1A1.7 1.7 0 0 0 8.4 15a1.7 1.7 0 0 0-1.5-1H6v-2.4h.9a1.7 1.7 0 0 0 1.5-1A1.7 1.7 0 0 0 8.1 8.7L8 8.6l1.7-1.7.1.1a1.7 1.7 0 0 0 1.9.3 1.7 1.7 0 0 0 1-1.5v-.2h2.4v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1 1.7 1.7-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.5 1h.2V14h-.2a1.7 1.7 0 0 0-1.5 1Z" />
-        </svg>
-      );
+function getSession(): Session | null {
+  try {
+    const raw = sessionStorage.getItem('katibaUserSession')
+    if (!raw) return null
 
-    case 'user':
-      return (
-        <svg {...common}>
-          <circle cx="12" cy="8" r="3.5" />
-          <path d="M5 21a7 7 0 0 1 14 0" />
-        </svg>
-      );
+    const parsed = JSON.parse(raw) as Partial<Session>
 
-    case 'search':
-      return (
-        <svg {...common}>
-          <circle cx="11" cy="11" r="6.5" />
-          <path d="m16 16 4.5 4.5" />
-        </svg>
-      );
-
-    case 'bell':
-      return (
-        <svg {...common}>
-          <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
-          <path d="M10 21h4" />
-        </svg>
-      );
-
-    case 'plus':
-      return (
-        <svg {...common}>
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      );
-
-    case 'arrow':
-      return (
-        <svg {...common}>
-          <path d="M5 12h14M13 6l6 6-6 6" />
-        </svg>
-      );
-
-    case 'eye':
-      return (
-        <svg {...common}>
-          <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
-          <circle cx="12" cy="12" r="2.5" />
-        </svg>
-      );
-
-    case 'people':
-      return (
-        <svg {...common}>
-          <circle cx="9" cy="8" r="3" />
-          <path d="M3 20a6 6 0 0 1 12 0" />
-          <path d="M16 5.5a3 3 0 0 1 0 5.8M18 14a5 5 0 0 1 3 4" />
-        </svg>
-      );
-
-    case 'book':
-      return (
-        <svg {...common}>
-          <path d="M4 5a3 3 0 0 1 3-3h4v19H7a3 3 0 0 0-3 3V5Z" />
-          <path d="M20 5a3 3 0 0 0-3-3h-4v19h4a3 3 0 0 1 3 3V5Z" />
-        </svg>
-      );
-
-    default:
-      return null;
-  }
-};
-
-// Unpacks standard array OR DRF paginated responses ({ count, results })
-const extractList = (data: any): any[] => {
-  if (Array.isArray(data)) return data;
-  if (data && Array.isArray(data.results)) return data.results;
-  return [];
-};
-
-/* =========================================================
-   NEWS BLUEPRINT VIEW
-   EMPTY MODULE - SAME STYLE AS OTHER EMPTY MODULES
-   ========================================================= */
-
-const NewsBlueprintView: React.FC<{
-  onBackToDashboard: () => void;
-}> = ({ onBackToDashboard }) => {
-  return (
-    <div style={{ padding: '27px' }}>
-      <div className="katiba-placeholder">
-        <Icon name="news" size={40} />
-
-        <h2 style={{ marginTop: '16px', color: '#0f172a' }}>
-          News Blueprint Module
-        </h2>
-
-        <p style={{ margin: '8px 0 20px', fontSize: '14px' }}>
-          This section is ready for expansion.
-        </p>
-
-        <button
-          type="button"
-          onClick={onBackToDashboard}
-          style={{
-            backgroundColor: '#006f64',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            borderRadius: '7px',
-            fontWeight: '700',
-            cursor: 'pointer',
-          }}
-        >
-          ← Back to Dashboard
-        </button>
-      </div>
-    </div>
-  );
-};
-
-/* =========================================================
-   MAIN DASHBOARD
-   ========================================================= */
-
-export const AuthorDashboard: React.FC = () => {
-  const [tab, setTab] = useState<Tab>('dashboard');
-  const [articles, setArticles] = useState<ArticleItem[]>([]);
-  const [blogs, setBlogs] = useState<BlogItem[]>([]);
-  const [load, setLoad] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Fetch Articles & Blogs from backend API
-  useEffect(() => {
-    async function fetchDashboardData() {
-      setLoad(true);
-
-      try {
-        const sessionData = sessionStorage.getItem('katibaUserSession');
-        const token = sessionData ? JSON.parse(sessionData).access : '';
-
-        const headers: Record<string, string> = {};
-
-        if (token) {
-          headers.Authorization = `Bearer ${token}`;
-        }
-
-        // Fetch using ?all=true&page_size=100 to get all articles regardless of status/pagination
-        const [articlesRes, blogsRes] = await Promise.all([
-          fetch('/api/articles/?all=true&page_size=100', { headers }),
-          fetch('/api/blogs/?page_size=100', { headers }),
-        ]);
-
-        const articlesData = articlesRes.ok
-          ? await articlesRes.json()
-          : [];
-
-        const blogsData = blogsRes.ok
-          ? await blogsRes.json()
-          : [];
-
-        setArticles(extractList(articlesData));
-        setBlogs(extractList(blogsData));
-      } catch (err) {
-        console.error('Failed to load dashboard data:', err);
-      } finally {
-        setLoad(false);
-      }
-    }
-
-    fetchDashboardData();
-  }, [tab]);
-
-  // Derived metrics for all database statuses
-  const publishedArticles = articles.filter(
-    a => a.status?.toLowerCase() === 'published'
-  );
-
-  const draftArticles = articles.filter(
-    a => a.status?.toLowerCase() === 'draft'
-  );
-
-  const reviewArticles = articles.filter(
-    a =>
-      a.status?.toLowerCase() === 'under review' ||
-      a.status?.toLowerCase() === 'under_review'
-  );
-
-  const totalLikes = blogs.reduce(
-    (acc, b) => acc + (b.likes_count || 0),
-    0
-  );
-
-  const filteredArticles = articles.filter(a =>
-    a.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const navItems: {
-    id: Tab;
-    label: string;
-    icon: string;
-    badge?: string;
-  }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'home' },
-    {
-      id: 'articles',
-      label: 'Articles',
-      icon: 'article',
-      badge: articles.length > 0 ? String(articles.length) : undefined,
-    },
-    {
-      id: 'blogs',
-      label: 'Blogs Feed',
-      icon: 'edit',
-      badge: blogs.length > 0 ? String(blogs.length) : undefined,
-    },
-    {
-      id: 'news',
-      label: 'News Blueprint',
-      icon: 'news',
-    },
-    {
-      id: 'analytics',
-      label: 'Analytics',
-      icon: 'analytics',
-    },
-    {
-      id: 'media',
-      label: 'Media Library',
-      icon: 'image',
-    },
-    {
-      id: 'comments',
-      label: 'Comments',
-      icon: 'comment',
-      badge: '3',
-    },
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: 'settings',
-    },
-    {
-      id: 'profile',
-      label: 'Profile',
-      icon: 'user',
-    },
-  ];
-
-  const formatDate = (date?: string) => {
-    if (!date) return 'Recently';
-
-    const d = new Date(date);
-
-    if (Number.isNaN(d.getTime())) {
-      return 'Recently';
-    }
-
-    return d.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const parseArticleContent = (rawContent?: string) => {
-    if (!rawContent) {
-      return 'No content preview available.';
-    }
-
-    try {
-      const parsed = JSON.parse(rawContent);
-      return parsed.opening || parsed.body || rawContent;
-    } catch {
-      return rawContent;
-    }
-  };
-
-  const getStatusBadgeStyle = (status?: string) => {
-    const s = status?.toLowerCase();
-
-    if (s === 'published') {
-      return {
-        background: '#eaf6f2',
-        color: '#006f64',
-      };
-    }
-
-    if (s === 'under review' || s === 'under_review') {
-      return {
-        background: '#fef3c7',
-        color: '#b45309',
-      };
+    if (
+      typeof parsed.access !== 'string' ||
+      !parsed.access ||
+      typeof parsed.username !== 'string'
+    ) {
+      return null
     }
 
     return {
-      background: '#eeeafa',
-      color: '#6952b4',
-    };
-  };
+      username: parsed.username,
+      role: parsed.role || 'Author',
+      access: parsed.access,
+    }
+  } catch {
+    return null
+  }
+}
+
+function getTabFromUrl(): Tab {
+  const requested = new URLSearchParams(window.location.search).get('tab')
+  return requested && validTabs.has(requested as Tab)
+    ? (requested as Tab)
+    : 'dashboard'
+}
+
+function extractList<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[]
+
+  if (
+    data &&
+    typeof data === 'object' &&
+    Array.isArray((data as { results?: unknown[] }).results)
+  ) {
+    return (data as { results: T[] }).results
+  }
+
+  return []
+}
+
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+function getErrorMessage(data: unknown, fallback: string): string {
+  const object = asObject(data)
+
+  if (typeof object.detail === 'string') return object.detail
+  if (typeof object.message === 'string') return object.message
+
+  const firstError = Object.values(object).find(
+    (value) => Array.isArray(value) && typeof value[0] === 'string',
+  )
+
+  if (Array.isArray(firstError)) return String(firstError[0])
+  return fallback
+}
+
+function displayValue(value: unknown): string {
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value).trim() || 'Not provided'
+  }
+
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No'
+  return 'Not provided'
+}
+
+function formatNumber(value: number): string {
+  return value.toLocaleString('en-KE')
+}
+
+function formatDate(value?: string): string {
+  if (!value) return 'Date unavailable'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Date unavailable'
+
+  return date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function formatDateTime(value?: string): string {
+  if (!value) return 'Date unavailable'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Date unavailable'
+
+  return date.toLocaleString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function normalizeStatus(status?: string): string {
+  return (status || 'unknown')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_')
+}
+
+function getStatusLabel(status?: string): string {
+  const normalized = normalizeStatus(status)
+
+  if (normalized === 'under_review' || normalized === 'in_review') {
+    return 'Under review'
+  }
+
+  if (normalized === 'pending_review') return 'Pending review'
+  if (normalized === 'unknown') return 'Not provided'
+
+  return normalized
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+function isPublished(record: ContentRecord): boolean {
+  return normalizeStatus(record.status) === 'published'
+}
+
+function isDraft(record: ContentRecord): boolean {
+  return normalizeStatus(record.status) === 'draft'
+}
+
+function isUnderReview(record: ContentRecord): boolean {
+  return ['under_review', 'in_review', 'pending_review'].includes(
+    normalizeStatus(record.status),
+  )
+}
+
+function getRecordDate(record: ContentRecord): string | undefined {
+  return record.published_at || record.created_at || record.updated_at
+}
+
+function getCreatedDate(record: ContentRecord): string | undefined {
+  return record.created_at || record.updated_at
+}
+
+function getDateKey(date: Date): string {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
+function getLastSevenDays(): ChartPoint[] {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today)
+    date.setDate(today.getDate() - (6 - index))
+
+    return {
+      label: date.toLocaleDateString('en-GB', { weekday: 'short' }),
+      value: 0,
+    }
+  })
+}
+
+function getLastTwelveMonths(): ChartPoint[] {
+  const today = new Date()
+
+  return Array.from({ length: 12 }, (_, index) => {
+    const date = new Date(today.getFullYear(), today.getMonth() - 11 + index, 1)
+
+    return {
+      label: date.toLocaleDateString('en-GB', { month: 'short' }),
+      value: 0,
+      secondary: 0,
+    }
+  })
+}
+
+function getRecordCategory(record: ContentRecord): string {
+  const category =
+    record.category_name ||
+    record.category ||
+    (record as Record<string, unknown>).category_title
+
+  return typeof category === 'string' && category.trim()
+    ? category.trim()
+    : 'Uncategorized'
+}
+
+function countByStatus(records: ContentRecord[]) {
+  const counts = new Map<string, number>()
+
+  records.forEach((record) => {
+    const key = normalizeStatus(record.status)
+    counts.set(key, (counts.get(key) || 0) + 1)
+  })
+
+  return Array.from(counts.entries())
+    .map(([key, value]) => ({
+      label: getStatusLabel(key),
+      key,
+      value,
+      color: STATUS_COLORS[key] || STATUS_COLORS.other,
+    }))
+    .sort((a, b) => b.value - a.value)
+}
+
+function getCategoryCounts(records: ContentRecord[]) {
+  const counts = new Map<string, number>()
+
+  records.forEach((record) => {
+    const category = getRecordCategory(record)
+    counts.set(category, (counts.get(category) || 0) + 1)
+  })
+
+  const colors = [
+    '#159b76',
+    '#7770d6',
+    '#3984d6',
+    '#e6a23c',
+    '#dc6464',
+    '#2097a6',
+    '#8b6dc1',
+    '#82958c',
+  ]
+
+  return Array.from(counts.entries())
+    .map(([label, value], index) => ({
+      label,
+      value,
+      color: colors[index % colors.length],
+    }))
+    .sort((a, b) => b.value - a.value)
+}
+
+function StatCard({
+  label,
+  value,
+  icon,
+  detail,
+  accent = 'green',
+}: {
+  label: string
+  value: string | number
+  icon: string
+  detail: string
+  accent?: string
+}) {
+  return (
+    <article className={`ad-stat ad-stat-${accent}`}>
+      <div className="ad-stat-top">
+        <span className="ad-stat-label">{label}</span>
+        <span className="ad-stat-icon" aria-hidden="true">{icon}</span>
+      </div>
+      <strong className="ad-stat-value">{value}</strong>
+      <div className="ad-stat-foot">{detail}</div>
+    </article>
+  )
+}
+
+function PanelHeading({
+  eyebrow,
+  title,
+  subtitle,
+  action,
+}: {
+  eyebrow?: string
+  title: string
+  subtitle?: string
+  action?: React.ReactNode
+}) {
+  return (
+    <div className="ad-panel-heading">
+      <div>
+        {eyebrow && <span className="ad-eyebrow">{eyebrow}</span>}
+        <h2>{title}</h2>
+        {subtitle && <p className="ad-section-subtitle">{subtitle}</p>}
+      </div>
+      {action}
+    </div>
+  )
+}
+
+function LineChart({
+  title,
+  subtitle,
+  labels,
+  series,
+  legend,
+}: {
+  title: string
+  subtitle: string
+  labels: string[]
+  series: { name: string; values: number[]; color: string }[]
+  legend?: boolean
+}) {
+  const width = 650
+  const height = 255
+  const left = 38
+  const right = 20
+  const top = 24
+  const bottom = 36
+  const plotWidth = width - left - right
+  const plotHeight = height - top - bottom
+  const maxValue = Math.max(1, ...series.flatMap((item) => item.values))
+  const yMax = Math.max(4, Math.ceil(maxValue / 4) * 4)
+
+  const pointsFor = (values: number[]) =>
+    values.map((value, index) => ({
+      x: left + (index / Math.max(1, labels.length - 1)) * plotWidth,
+      y: top + plotHeight - (value / yMax) * plotHeight,
+      value,
+    }))
 
   return (
-    <>
-      <style>{`
-        * {
-          box-sizing: border-box;
-        }
-
-        .katiba-dashboard {
-          min-height: 100vh;
-          background: #f6f8fa;
-          color: #101820;
-          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-          display: flex;
-        }
-
-        .katiba-sidebar {
-          width: 248px;
-          min-width: 248px;
-          background: #0b1a1f;
-          color: white;
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-          position: sticky;
-          top: 0;
-          height: 100vh;
-          overflow-y: auto;
-        }
-
-        .katiba-logo {
-          padding: 25px 24px 21px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .katiba-logo-icon {
-          width: 38px;
-          height: 38px;
-          border-radius: 10px;
-          background: #35d49f;
-          color: #0b1a1f;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .katiba-logo-title {
-          font-size: 19px;
-          font-weight: 800;
-          line-height: 1.05;
-        }
-
-        .katiba-logo-subtitle {
-          font-size: 10px;
-          color: #b8c4c7;
-          margin-top: 4px;
-        }
-
-        .katiba-nav {
-          padding: 10px;
-        }
-
-        .katiba-nav-button {
-          width: 100%;
-          border: 0;
-          background: transparent;
-          color: #d7e0e2;
-          height: 46px;
-          border-radius: 9px;
-          padding: 0 15px;
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          cursor: pointer;
-          font-size: 13px;
-          font-weight: 500;
-          text-align: left;
-          margin-bottom: 3px;
-        }
-
-        .katiba-nav-button:hover {
-          background: rgba(255,255,255,.06);
-        }
-
-        .katiba-nav-button.active {
-          background: #0d6953;
-          color: white;
-        }
-
-        .katiba-nav-badge {
-          margin-left: auto;
-          padding: 2px 7px;
-          border-radius: 10px;
-          background: #35d49f;
-          color: #08231c;
-          font-size: 10px;
-          font-weight: 800;
-        }
-
-        .katiba-sidebar-bottom {
-          margin-top: auto;
-          padding: 20px;
-        }
-
-        .katiba-story-card {
-          min-height: 180px;
-          border: 1px solid rgba(95, 207, 170, .25);
-          border-radius: 10px;
-          padding: 18px;
-          position: relative;
-          overflow: hidden;
-          background: linear-gradient(to bottom, rgba(9, 29, 35, .72), rgba(9, 29, 35, .98));
-        }
-
-        .katiba-story-card:before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          opacity: .18;
-          background: radial-gradient(circle at 50% 100%, #35d49f 0, transparent 40%);
-          pointer-events: none;
-        }
-
-        .katiba-story-title {
-          font-size: 13px;
-          font-weight: 700;
-          margin-bottom: 12px;
-          color: #ffffff;
-        }
-
-        .katiba-story-text {
-          font-size: 11px;
-          line-height: 1.6;
-          color: #c7d0d2;
-        }
-
-        .katiba-story-line {
-          width: 35px;
-          height: 2px;
-          background: #35d49f;
-          margin-top: 14px;
-        }
-
-        .katiba-main {
-          min-width: 0;
-          flex: 1;
-        }
-
-        .katiba-topbar {
-          height: 68px;
-          background: #fff;
-          border-bottom: 1px solid #e6eaed;
-          display: flex;
-          align-items: center;
-          padding: 0 27px;
-          gap: 20px;
-        }
-
-        .katiba-search {
-          height: 38px;
-          background: #f3f5f7;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding: 0 13px;
-          flex: 1;
-          max-width: 515px;
-          color: #829096;
-        }
-
-        .katiba-search input {
-          border: 0;
-          outline: none;
-          background: transparent;
-          width: 100%;
-          font-size: 12px;
-          color: #334155;
-        }
-
-        .katiba-create {
-          margin-left: auto;
-          height: 36px;
-          border: 0;
-          background: #006f64;
-          color: white;
-          border-radius: 8px;
-          padding: 0 16px;
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          font-weight: 700;
-          font-size: 12px;
-          cursor: pointer;
-        }
-
-        .katiba-notification {
-          position: relative;
-          color: #16242a;
-          cursor: pointer;
-        }
-
-        .katiba-notification-dot {
-          position: absolute;
-          top: 0;
-          right: 0;
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: #e11d48;
-        }
-
-        .katiba-user {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          padding-left: 4px;
-        }
-
-        .katiba-avatar {
-          width: 34px;
-          height: 34px;
-          border-radius: 50%;
-          background: #006f64;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 12px;
-          font-weight: 800;
-        }
-
-        .katiba-user-name {
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .katiba-user-role {
-          color: #859196;
-          font-size: 10px;
-          margin-top: 2px;
-        }
-
-        .katiba-content {
-          padding: 24px 27px 36px;
-        }
-
-        .katiba-welcome {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 24px;
-        }
-
-        .katiba-welcome h1 {
-          margin: 0;
-          font-size: 26px;
-          letter-spacing: -.5px;
-          font-weight: 800;
-        }
-
-        .katiba-welcome p {
-          margin: 7px 0 0;
-          color: #66757b;
-          font-size: 13px;
-        }
-
-        .katiba-welcome-right {
-          text-align: right;
-        }
-
-        .katiba-date {
-          color: #58676d;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .katiba-quote {
-          margin-top: 6px;
-          color: #5d696e;
-          font-size: 11px;
-          font-style: italic;
-        }
-
-        .katiba-stat-grid {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 16px;
-        }
-
-        .katiba-stat-card {
-          background: white;
-          border: 1px solid #e5eaed;
-          border-radius: 10px;
-          padding: 18px;
-          position: relative;
-        }
-
-        .katiba-stat-icon {
-          width: 38px;
-          height: 38px;
-          border-radius: 50%;
-          background: #e5f8f1;
-          color: #078362;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-bottom: 12px;
-        }
-
-        .katiba-stat-icon.blue {
-          background: #e8eefb;
-          color: #2765c4;
-        }
-
-        .katiba-stat-icon.amber {
-          background: #fef3c7;
-          color: #b45309;
-        }
-
-        .katiba-stat-title {
-          position: absolute;
-          top: 19px;
-          left: 68px;
-          color: #66747a;
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .katiba-stat-value {
-          font-size: 26px;
-          font-weight: 800;
-          line-height: 1;
-        }
-
-        .katiba-stat-change {
-          color: #07916c;
-          font-size: 11px;
-          font-weight: 700;
-          margin-top: 10px;
-        }
-
-        .katiba-stat-note {
-          color: #9aa5a9;
-          font-size: 10px;
-          margin-top: 3px;
-        }
-
-        .katiba-middle {
-          display: grid;
-          grid-template-columns: minmax(0, 1.85fr) minmax(285px, .85fr);
-          gap: 16px;
-          margin-top: 18px;
-        }
-
-        .katiba-card {
-          background: white;
-          border: 1px solid #e5eaed;
-          border-radius: 10px;
-          overflow: hidden;
-        }
-
-        .katiba-card-header {
-          padding: 18px 20px 0;
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-        }
-
-        .katiba-card-title {
-          margin: 0;
-          font-size: 15px;
-          font-weight: 800;
-        }
-
-        .katiba-card-subtitle {
-          color: #7e8b90;
-          font-size: 11px;
-          margin-top: 4px;
-        }
-
-        .katiba-period {
-          display: flex;
-          border: 1px solid #edf0f1;
-          border-radius: 6px;
-          overflow: hidden;
-        }
-
-        .katiba-period button {
-          border: 0;
-          background: white;
-          color: #79868b;
-          padding: 6px 10px;
-          font-size: 10px;
-          cursor: pointer;
-        }
-
-        .katiba-period button.active {
-          background: #006f64;
-          color: white;
-        }
-
-        .katiba-chart {
-          padding: 16px 20px;
-          height: 220px;
-        }
-
-        .katiba-chart svg {
-          width: 100%;
-          height: 100%;
-        }
-
-        .katiba-activity-list {
-          padding: 10px 20px 18px;
-        }
-
-        .katiba-activity-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 10px 0;
-          border-bottom: 1px solid #f0f2f3;
-        }
-
-        .katiba-activity-item:last-child {
-          border-bottom: 0;
-        }
-
-        .katiba-activity-icon {
-          flex: 0 0 auto;
-          width: 34px;
-          height: 34px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #e5f8f1;
-          color: #006f64;
-        }
-
-        .katiba-activity-text {
-          min-width: 0;
-          flex: 1;
-        }
-
-        .katiba-activity-title {
-          font-size: 12px;
-          font-weight: 700;
-          color: #26363c;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .katiba-activity-sub {
-          color: #879398;
-          font-size: 11px;
-          margin-top: 2px;
-        }
-
-        .katiba-activity-time {
-          color: #859196;
-          font-size: 10px;
-          white-space: nowrap;
-        }
-
-        .katiba-lower {
-          display: grid;
-          grid-template-columns: 1fr 1fr .85fr;
-          gap: 16px;
-          margin-top: 18px;
-        }
-
-        .katiba-list {
-          padding: 10px 20px 16px;
-        }
-
-        .katiba-list-row {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          min-height: 52px;
-          border-bottom: 1px solid #f0f2f3;
-          cursor: pointer;
-        }
-
-        .katiba-list-row:last-child {
-          border-bottom: 0;
-        }
-
-        .katiba-thumb {
-          width: 42px;
-          height: 34px;
-          flex: 0 0 42px;
-          border-radius: 6px;
-          background: linear-gradient(135deg, #006f64, #35d49f);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-        }
-
-        .katiba-list-info {
-          min-width: 0;
-          flex: 1;
-        }
-
-        .katiba-list-title {
-          font-size: 12px;
-          font-weight: 700;
-          color: #26363c;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .katiba-list-meta {
-          display: flex;
-          gap: 8px;
-          align-items: center;
-          margin-top: 4px;
-          font-size: 10px;
-          color: #8b979b;
-        }
-
-        .katiba-tag {
-          padding: 2px 7px;
-          border-radius: 4px;
-          font-size: 10px;
-          font-weight: 700;
-        }
-
-        .katiba-quick-list {
-          padding: 10px 20px 16px;
-        }
-
-        .katiba-quick-row {
-          height: 44px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          border-bottom: 1px solid #f0f2f3;
-          font-size: 12px;
-          font-weight: 600;
-          color: #304047;
-          cursor: pointer;
-        }
-
-        .katiba-quick-row:last-child {
-          border-bottom: 0;
-        }
-
-        .katiba-quick-icon {
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
-          background: #e6f7f1;
-          color: #006f64;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .katiba-quick-arrow {
-          margin-left: auto;
-          color: #78868a;
-        }
-
-        .katiba-viewer-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(5, 20, 24, .45);
-          z-index: 100;
-          display: flex;
-          justify-content: flex-end;
-        }
-
-        .katiba-viewer {
-          width: min(650px, 92vw);
-          height: 100vh;
-          background: white;
-          padding: 32px;
-          overflow-y: auto;
-          box-shadow: -8px 0 30px rgba(0,0,0,.12);
-        }
-
-        .katiba-viewer-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid #edf0f1;
-          padding-bottom: 14px;
-          margin-bottom: 22px;
-        }
-
-        .katiba-close {
-          border: 0;
-          background: #f1f4f5;
-          border-radius: 7px;
-          padding: 8px 14px;
-          cursor: pointer;
-          color: #435157;
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .katiba-viewer h1 {
-          font-size: 24px;
-          margin: 0 0 12px;
-          color: #0f172a;
-        }
-
-        .katiba-viewer-content {
-          white-space: pre-wrap;
-          color: #334155;
-          font-size: 14px;
-          line-height: 1.7;
-        }
-
-        .katiba-placeholder {
-          background: white;
-          border: 1px solid #e5eaed;
-          border-radius: 12px;
-          padding: 60px 20px;
-          text-align: center;
-          color: #64748b;
-        }
-
-        @media (max-width: 1200px) {
-          .katiba-stat-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-
-          .katiba-lower {
-            grid-template-columns: 1fr 1fr;
-          }
-
-          .katiba-lower > :last-child {
-            grid-column: 1 / -1;
-          }
-        }
-
-        @media (max-width: 900px) {
-          .katiba-sidebar {
-            width: 75px;
-            min-width: 75px;
-          }
-
-          .katiba-logo {
-            justify-content: center;
-            padding: 20px 10px;
-          }
-
-          .katiba-logo-text,
-          .katiba-nav-button span,
-          .katiba-story-card,
-          .katiba-nav-badge {
-            display: none;
-          }
-
-          .katiba-nav-button {
-            justify-content: center;
-            padding: 0;
-          }
-
-          .katiba-middle,
-          .katiba-lower {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
-
-      <div className="katiba-dashboard">
-        {/* SIDEBAR */}
-        <aside className="katiba-sidebar">
-          <div className="katiba-logo">
-            <div className="katiba-logo-icon">
-              <Icon name="book" size={23} />
-            </div>
-
-            <div className="katiba-logo-text">
-              <div className="katiba-logo-title">Katiba News</div>
-              <div className="katiba-logo-subtitle">
-                Know. Understand. Engage.
-              </div>
-            </div>
-          </div>
-
-          <nav className="katiba-nav">
-            {navItems.map(item => (
-              <button
-                key={item.id}
-                className={`katiba-nav-button ${
-                  tab === item.id ? 'active' : ''
-                }`}
-                onClick={() => {
-                  setTab(item.id);
-                  setSelectedItem(null);
-                }}
-              >
-                <Icon name={item.icon} size={19} />
-                <span>{item.label}</span>
-                {item.badge && (
-                  <span className="katiba-nav-badge">
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-
-          <div className="katiba-sidebar-bottom">
-            <div className="katiba-story-card">
-              <div className="katiba-story-title">
-                Good stories
-                <br />
-                build a better Kenya.
-              </div>
-
-              <div className="katiba-story-text">
-                Keep informing,
-                <br />
-                keep inspiring.
-              </div>
-
-              <div className="katiba-story-line" />
-            </div>
-          </div>
-        </aside>
-
-        {/* MAIN */}
-        <main className="katiba-main">
-          {/* TOP BAR */}
-          <header className="katiba-topbar">
-            <div className="katiba-search">
-              <Icon name="search" size={17} />
-
-              <input
-                type="text"
-                placeholder="Search your articles, blogs, or topics..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <button
-              className="katiba-create"
-              onClick={() => setTab('articles')}
-            >
-              <Icon name="plus" size={16} />
-              Create Article
-            </button>
-
-            <div className="katiba-notification">
-              <Icon name="bell" size={21} />
-              <span className="katiba-notification-dot" />
-            </div>
-
-            <div className="katiba-user">
-              <div className="katiba-avatar">AD</div>
-
-              <div>
-                <div className="katiba-user-name">
-                  Abdube Dida
-                </div>
-
-                <div className="katiba-user-role">
-                  Author
-                </div>
-              </div>
-            </div>
-          </header>
-
-          {/* TAB CONTENT SWITCHING */}
-
-          {tab === 'articles' ? (
-            <div style={{ padding: '24px' }}>
-              <ArticleEditor
-                onBackToDashboard={() => setTab('dashboard')}
-              />
-            </div>
-          ) : tab === 'blogs' ? (
-            <div style={{ padding: '24px' }}>
-              <BlogView
-                onBackToDashboard={() => setTab('dashboard')}
-                onNavigateToArticles={() => setTab('articles')}
-              />
-            </div>
-          ) : tab === 'news' ? (
-            <NewsBlueprintView
-              onBackToDashboard={() => setTab('dashboard')}
-            />
-          ) : tab !== 'dashboard' ? (
-            <div style={{ padding: '27px' }}>
-              <div className="katiba-placeholder">
-                <Icon
-                  name={navItems.find(i => i.id === tab)?.icon || 'home'}
-                  size={40}
+    <section className="ad-chart-card">
+      <div className="ad-chart-heading">
+        <div>
+          <h3>{title}</h3>
+          <p>{subtitle}</p>
+        </div>
+      </div>
+
+      <div className="ad-chart-scroll">
+        <svg
+          className="ad-svg-chart"
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={title}
+        >
+          {[0, 1, 2, 3, 4].map((step) => {
+            const value = (yMax / 4) * step
+            const y = top + plotHeight - (step / 4) * plotHeight
+
+            return (
+              <g key={step}>
+                <line
+                  x1={left}
+                  y1={y}
+                  x2={width - right}
+                  y2={y}
+                  stroke="#e8efeb"
+                  strokeDasharray="4 5"
                 />
-
-                <h2
-                  style={{
-                    marginTop: '16px',
-                    color: '#0f172a',
-                  }}
+                <text
+                  x={left - 9}
+                  y={y + 4}
+                  textAnchor="end"
+                  fill="#8a9892"
+                  fontSize="10"
                 >
-                  {navItems.find(i => i.id === tab)?.label} Module
-                </h2>
+                  {Math.round(value)}
+                </text>
+              </g>
+            )
+          })}
 
-                <p
-                  style={{
-                    margin: '8px 0 20px',
-                    fontSize: '14px',
-                  }}
-                >
-                  This section is connected to the backend database and ready
-                  for expansion.
-                </p>
+          {series.map((item) => {
+            const points = pointsFor(item.values)
+            const polyline = points.map((point) => `${point.x},${point.y}`).join(' ')
 
-                <button
-                  type="button"
-                  onClick={() => setTab('dashboard')}
-                  style={{
-                    backgroundColor: '#006f64',
-                    color: 'white',
-                    border: 'none',
-                    padding: '10px 20px',
-                    borderRadius: '7px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                  }}
+            return (
+              <g key={item.name}>
+                <polyline
+                  points={polyline}
+                  fill="none"
+                  stroke={item.color}
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                />
+                {points.map((point, index) => (
+                  <g key={`${item.name}-${index}`}>
+                    <circle
+                      cx={point.x}
+                      cy={point.y}
+                      r="4"
+                      fill="#fff"
+                      stroke={item.color}
+                      strokeWidth="2.5"
+                    />
+                    <title>{`${labels[index]}: ${point.value} ${item.name}`}</title>
+                  </g>
+                ))}
+              </g>
+            )
+          })}
+
+          {labels.map((label, index) => {
+            const x = left + (index / Math.max(1, labels.length - 1)) * plotWidth
+            return (
+              <text
+                key={`${label}-${index}`}
+                x={x}
+                y={height - 12}
+                textAnchor="middle"
+                fill="#7f8d87"
+                fontSize="10"
+              >
+                {label}
+              </text>
+            )
+          })}
+        </svg>
+      </div>
+
+      {legend !== false && (
+        <div className="ad-chart-legend">
+          {series.map((item) => (
+            <span key={item.name}>
+              <i style={{ background: item.color }} />
+              {item.name}
+            </span>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+function BarChart({
+  title,
+  subtitle,
+  labels,
+  series,
+}: {
+  title: string
+  subtitle: string
+  labels: string[]
+  series: { name: string; values: number[]; color: string }[]
+}) {
+  const width = 650
+  const height = 255
+  const left = 38
+  const right = 16
+  const top = 25
+  const bottom = 39
+  const plotWidth = width - left - right
+  const plotHeight = height - top - bottom
+  const maxValue = Math.max(1, ...series.flatMap((item) => item.values))
+  const yMax = Math.max(4, Math.ceil(maxValue / 4) * 4)
+  const groupWidth = plotWidth / Math.max(1, labels.length)
+  const groupGap = groupWidth * 0.12
+  const barGap = 3
+  const barWidth = Math.max(
+    3,
+    (groupWidth - groupGap - barGap * Math.max(0, series.length - 1)) /
+      Math.max(1, series.length),
+  )
+
+  return (
+    <section className="ad-chart-card">
+      <div className="ad-chart-heading">
+        <div>
+          <h3>{title}</h3>
+          <p>{subtitle}</p>
+        </div>
+      </div>
+
+      <div className="ad-chart-scroll">
+        <svg
+          className="ad-svg-chart"
+          viewBox={`0 0 ${width} ${height}`}
+          role="img"
+          aria-label={title}
+        >
+          {[0, 1, 2, 3, 4].map((step) => {
+            const value = (yMax / 4) * step
+            const y = top + plotHeight - (step / 4) * plotHeight
+
+            return (
+              <g key={step}>
+                <line
+                  x1={left}
+                  y1={y}
+                  x2={width - right}
+                  y2={y}
+                  stroke="#e8efeb"
+                  strokeDasharray="4 5"
+                />
+                <text
+                  x={left - 9}
+                  y={y + 4}
+                  textAnchor="end"
+                  fill="#8a9892"
+                  fontSize="10"
                 >
-                  ← Return to Main Dashboard
-                </button>
+                  {Math.round(value)}
+                </text>
+              </g>
+            )
+          })}
+
+          {labels.map((label, index) => {
+            const groupStart = left + index * groupWidth + groupGap / 2
+
+            return (
+              <g key={`${label}-${index}`}>
+                {series.map((item, seriesIndex) => {
+                  const value = item.values[index] || 0
+                  const barHeight = (value / yMax) * plotHeight
+                  const x = groupStart + seriesIndex * (barWidth + barGap)
+                  const y = top + plotHeight - barHeight
+
+                  return (
+                    <g key={item.name}>
+                      <rect
+                        x={x}
+                        y={y}
+                        width={barWidth}
+                        height={Math.max(0, barHeight)}
+                        rx="3"
+                        fill={item.color}
+                      />
+                      <title>{`${label}: ${value} ${item.name}`}</title>
+                    </g>
+                  )
+                })}
+
+                <text
+                  x={left + index * groupWidth + groupWidth / 2}
+                  y={height - 12}
+                  textAnchor="middle"
+                  fill="#7f8d87"
+                  fontSize="10"
+                >
+                  {label}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
+      </div>
+
+      <div className="ad-chart-legend">
+        {series.map((item) => (
+          <span key={item.name}>
+            <i style={{ background: item.color }} />
+            {item.name}
+          </span>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function PieChart({
+  title,
+  subtitle,
+  data,
+}: {
+  title: string
+  subtitle: string
+  data: { label: string; value: number; color: string }[]
+}) {
+  const total = data.reduce((sum, item) => sum + item.value, 0)
+  const radius = 72
+  const circumference = 2 * Math.PI * radius
+  let runningOffset = 0
+
+  return (
+    <section className="ad-chart-card">
+      <div className="ad-chart-heading">
+        <div>
+          <h3>{title}</h3>
+          <p>{subtitle}</p>
+        </div>
+      </div>
+
+      {total === 0 ? (
+        <div className="ad-chart-empty">
+          <div className="ad-pie-empty">0</div>
+          <p>No records available for this chart.</p>
+        </div>
+      ) : (
+        <div className="ad-pie-layout">
+          <div className="ad-pie-graphic">
+            <svg viewBox="0 0 190 190" role="img" aria-label={title}>
+              <circle
+                cx="95"
+                cy="95"
+                r={radius}
+                fill="none"
+                stroke="#edf2ef"
+                strokeWidth="25"
+              />
+              <g transform="rotate(-90 95 95)">
+                {data.filter((item) => item.value > 0).map((item) => {
+                  const length = (item.value / total) * circumference
+                  const offset = runningOffset
+                  runningOffset += length
+
+                  return (
+                    <circle
+                      key={item.label}
+                      cx="95"
+                      cy="95"
+                      r={radius}
+                      fill="none"
+                      stroke={item.color}
+                      strokeWidth="25"
+                      strokeDasharray={`${length} ${circumference - length}`}
+                      strokeDashoffset={-offset}
+                    >
+                      <title>{`${item.label}: ${item.value}`}</title>
+                    </circle>
+                  )
+                })}
+              </g>
+              <text
+                x="95"
+                y="90"
+                textAnchor="middle"
+                fill="#1d332c"
+                fontSize="27"
+                fontWeight="800"
+              >
+                {total}
+              </text>
+              <text
+                x="95"
+                y="109"
+                textAnchor="middle"
+                fill="#7c8b84"
+                fontSize="10"
+              >
+                TOTAL
+              </text>
+            </svg>
+          </div>
+
+          <div className="ad-pie-legend">
+            {data.map((item) => (
+              <div className="ad-pie-legend-row" key={item.label}>
+                <span className="ad-pie-legend-name">
+                  <i style={{ background: item.color }} />
+                  <span>{item.label}</span>
+                </span>
+                <strong>{item.value}</strong>
+                <span className="ad-pie-percent">
+                  {((item.value / total) * 100).toFixed(0)}%
+                </span>
               </div>
-            </div>
-          ) : (
-            /* DASHBOARD VIEW */
-            <div className="katiba-content">
-              {/* WELCOME */}
-              <section className="katiba-welcome">
-                <div>
-                  <h1>Welcome back, Abdube! 👋</h1>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  )
+}
 
-                  <p>
-                    Here is what is happening with your content live from the
-                    database.
-                  </p>
+function CategoryChart({
+  title,
+  subtitle,
+  records,
+}: {
+  title: string
+  subtitle: string
+  records: ContentRecord[]
+}) {
+  const categories = getCategoryCounts(records)
+  const total = records.length
+
+  return (
+    <section className="ad-chart-card">
+      <div className="ad-chart-heading">
+        <div>
+          <h3>{title}</h3>
+          <p>{subtitle}</p>
+        </div>
+        <div className="ad-chart-total">
+          <strong>{total}</strong>
+          <span>Records</span>
+        </div>
+      </div>
+
+      {categories.length === 0 ? (
+        <div className="ad-chart-empty">
+          <p>No content records available.</p>
+        </div>
+      ) : (
+        <div className="ad-category-list">
+          {categories.slice(0, 8).map((category) => {
+            const percentage = total ? (category.value / total) * 100 : 0
+
+            return (
+              <div className="ad-category-row" key={category.label}>
+                <div className="ad-category-top">
+                  <span>
+                    <i style={{ background: category.color }} />
+                    {category.label}
+                  </span>
+                  <strong>{category.value}</strong>
                 </div>
+                <div className="ad-progress-track">
+                  <div
+                    className="ad-progress-fill"
+                    style={{
+                      width: `${percentage}%`,
+                      background: category.color,
+                    }}
+                  />
+                </div>
+                <span className="ad-category-percent">{percentage.toFixed(0)}%</span>
+              </div>
+            )
+          })}
+          {categories.length > 8 && (
+            <p className="ad-muted">
+              Showing the eight most common categories out of {categories.length}.
+            </p>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
 
-                <div className="katiba-welcome-right">
-                  <div className="katiba-date">
-                    {new Date().toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
+function AuthorDashboard() {
+  const [tab, setTab] = useState<Tab>(getTabFromUrl)
+  const [session, setSession] = useState<Session | null>(getSession)
+  const [account, setAccount] = useState<Record<string, unknown> | null>(null)
+  const [articles, setArticles] = useState<Article[]>([])
+  const [blogs, setBlogs] = useState<Blog[]>([])
+  const [profile, setProfile] = useState<AuthorProfile | null>(null)
+
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [profileDraft, setProfileDraft] = useState<AuthorProfile>({})
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileSaveMessage, setProfileSaveMessage] = useState('')
+  const [profileSaveError, setProfileSaveError] = useState('')
+
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [profileError, setProfileError] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null)
+
+  const token = session?.access
+
+  const logout = useCallback(() => {
+    sessionStorage.removeItem('katibaUserSession')
+    setSession(null)
+    window.location.replace('/signin')
+  }, [])
+
+  const handleUnauthorized = useCallback(() => {
+    sessionStorage.removeItem('katibaUserSession')
+    setSession(null)
+    window.location.replace('/signin')
+  }, [])
+
+  const authenticatedFetch = useCallback(
+    async (url: string, options: RequestInit = {}) => {
+      const currentSession = getSession()
+
+      if (!currentSession?.access) {
+        handleUnauthorized()
+        throw new Error('Your session has expired. Please sign in again.')
+      }
+
+      const headers = new Headers(options.headers)
+      headers.set('Authorization', `Bearer ${currentSession.access}`)
+
+      if (options.body && !headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json')
+      }
+
+      const response = await fetch(url, { ...options, headers })
+
+      if (response.status === 401) {
+        handleUnauthorized()
+        throw new Error('Your session has expired. Please sign in again.')
+      }
+
+      if (response.status === 403) {
+        throw new Error('You do not have permission to access this resource.')
+      }
+
+      return response
+    },
+    [handleUnauthorized],
+  )
+
+  const changeTab = useCallback((nextTab: Tab) => {
+    setTab(nextTab)
+    setSearchQuery('')
+    setError('')
+
+    const url = new URL(window.location.href)
+    url.pathname = DASHBOARD_PATH
+
+    if (nextTab === 'dashboard') {
+      url.searchParams.delete('tab')
+    } else {
+      url.searchParams.set('tab', nextTab)
+    }
+
+    window.history.pushState(
+      { tab: nextTab },
+      '',
+      `${url.pathname}${url.search}`,
+    )
+  }, [])
+
+  const handleDashboardBackCapture = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+
+      const control = target.closest('button, a, [role="button"]')
+      if (!control) return
+
+      const label = (control.textContent || '')
+        .replace(/[←→↩↪]/g, '')
+        .trim()
+        .toLowerCase()
+
+      if (!label.includes('dashboard')) return
+
+      event.preventDefault()
+      event.stopPropagation()
+      changeTab('dashboard')
+    },
+    [changeTab],
+  )
+
+  useEffect(() => {
+    const onPopState = () => {
+      setTab(getTabFromUrl())
+      setSearchQuery('')
+    }
+
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  useEffect(() => {
+    const currentSession = getSession()
+    if (!currentSession) {
+      logout()
+      return
+    }
+    setSession(currentSession)
+  }, [logout])
+
+  const fetchAccount = useCallback(async () => {
+    const response = await authenticatedFetch(ACCOUNT_ENDPOINT)
+
+    if (!response.ok) {
+      throw new Error(`Could not load account details (HTTP ${response.status}).`)
+    }
+
+    setAccount(asObject(await response.json()))
+  }, [authenticatedFetch])
+
+  const fetchContent = useCallback(
+    async (showRefresh = false) => {
+      if (showRefresh) setRefreshing(true)
+      else setLoading(true)
+
+      setError('')
+
+      try {
+        const [articlesResponse, blogsResponse] = await Promise.all([
+          authenticatedFetch(ARTICLES_ENDPOINT),
+          authenticatedFetch(BLOGS_ENDPOINT),
+        ])
+
+        if (!articlesResponse.ok) {
+          throw new Error(`Could not load articles (HTTP ${articlesResponse.status}).`)
+        }
+
+        if (!blogsResponse.ok) {
+          throw new Error(`Could not load blogs (HTTP ${blogsResponse.status}).`)
+        }
+
+        const [articlesData, blogsData] = await Promise.all([
+          articlesResponse.json(),
+          blogsResponse.json(),
+        ])
+
+        setArticles(extractList<Article>(articlesData))
+        setBlogs(extractList<Blog>(blogsData))
+        setLastUpdated(new Date().toISOString())
+
+        void fetchAccount().catch((accountError: unknown) => {
+          console.warn('Account details could not be refreshed:', accountError)
+        })
+      } catch (fetchError) {
+        setError(
+          fetchError instanceof Error
+            ? fetchError.message
+            : 'Could not load dashboard information.',
+        )
+      } finally {
+        setLoading(false)
+        setRefreshing(false)
+      }
+    },
+    [authenticatedFetch, fetchAccount],
+  )
+
+  const fetchProfile = useCallback(async () => {
+    setProfileLoading(true)
+    setProfileError('')
+    setProfileSaveError('')
+    setProfileSaveMessage('')
+
+    try {
+      const response = await authenticatedFetch(PROFILE_ENDPOINT)
+      const data: unknown = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        throw new Error(
+          getErrorMessage(
+            data,
+            `Could not load your author profile (HTTP ${response.status}).`,
+          ),
+        )
+      }
+
+      const object = asObject(data)
+      const savedProfile = asObject(
+        object.profile ?? object.author_profile ?? object.data ?? object,
+      ) as AuthorProfile
+
+      setProfile(savedProfile)
+
+      if (!editingProfile) {
+        setProfileDraft({ ...savedProfile })
+      }
+    } catch (profileFetchError) {
+      setProfileError(
+        profileFetchError instanceof Error
+          ? profileFetchError.message
+          : 'Could not load your author profile.',
+      )
+      setProfile(null)
+    } finally {
+      setProfileLoading(false)
+    }
+  }, [authenticatedFetch, editingProfile])
+
+  useEffect(() => {
+    if (!token) return
+    void fetchContent()
+  }, [token, fetchContent])
+
+  useEffect(() => {
+    if (!token || tab !== 'profile') return
+    void fetchProfile()
+  }, [tab, token, fetchProfile])
+
+  const allContent = useMemo<ContentRecord[]>(
+    () => [...articles, ...blogs],
+    [articles, blogs],
+  )
+
+  const publishedArticles = useMemo(
+    () => articles.filter(isPublished).length,
+    [articles],
+  )
+  const draftArticles = useMemo(
+    () => articles.filter(isDraft).length,
+    [articles],
+  )
+  const reviewArticles = useMemo(
+    () => articles.filter(isUnderReview).length,
+    [articles],
+  )
+
+  const blogsWithStatus = useMemo(
+    () => blogs.filter((blog) => Boolean(blog.status?.trim())),
+    [blogs],
+  )
+  const publishedBlogs = useMemo(
+    () => blogs.filter(isPublished).length,
+    [blogs],
+  )
+  const draftBlogs = useMemo(
+    () => blogs.filter(isDraft).length,
+    [blogs],
+  )
+  const reviewBlogs = useMemo(
+    () => blogs.filter(isUnderReview).length,
+    [blogs],
+  )
+
+  const totalBlogLikes = useMemo(
+    () => blogs.reduce((sum, blog) => sum + (Number(blog.likes_count) || 0), 0),
+    [blogs],
+  )
+  const totalArticleViews = useMemo(
+    () => articles.reduce((sum, article) => sum + (Number(article.views_count) || 0), 0),
+    [articles],
+  )
+  const totalBlogViews = useMemo(
+    () => blogs.reduce((sum, blog) => sum + (Number(blog.views_count) || 0), 0),
+    [blogs],
+  )
+
+  const authorName =
+    profile?.preferred_byline ||
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') ||
+    [account?.first_name, account?.last_name]
+      .filter((part): part is string => typeof part === 'string' && Boolean(part))
+      .join(' ') ||
+    (typeof account?.username === 'string' ? account.username : '') ||
+    session?.username ||
+    'Author'
+
+  const initials = authorName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join('')
+
+  const filteredArticles = useMemo(
+    () =>
+      articles.filter((article) =>
+        (article.title || '').toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [articles, searchQuery],
+  )
+
+  const filteredBlogs = useMemo(
+    () =>
+      blogs.filter((blog) =>
+        (blog.title || '').toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
+    [blogs, searchQuery],
+  )
+
+  const weeklyData = useMemo(() => {
+    const days = getLastSevenDays()
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const dates = days.map((_, index) => {
+      const date = new Date(today)
+      date.setDate(today.getDate() - (6 - index))
+      return getDateKey(date)
+    })
+
+    return {
+      labels: days.map((day) => day.label),
+      articleValues: dates.map((key) =>
+        articles.filter((article) => {
+          const value = getCreatedDate(article)
+          return value && getDateKey(new Date(value)) === key
+        }).length,
+      ),
+      blogValues: dates.map((key) =>
+        blogs.filter((blog) => {
+          const value = getCreatedDate(blog)
+          return value && getDateKey(new Date(value)) === key
+        }).length,
+      ),
+    }
+  }, [articles, blogs])
+
+  const monthlyData = useMemo(() => {
+    const months = getLastTwelveMonths()
+    const now = new Date()
+    const keys = months.map((_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - 11 + index, 1)
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    })
+
+    return {
+      labels: months.map((month) => month.label),
+      articleValues: keys.map((key) =>
+        articles.filter((article) => {
+          const value = getCreatedDate(article)
+          if (!value) return false
+          const date = new Date(value)
+          return !Number.isNaN(date.getTime()) &&
+            `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}` === key
+        }).length,
+      ),
+      blogValues: keys.map((key) =>
+        blogs.filter((blog) => {
+          const value = getCreatedDate(blog)
+          if (!value) return false
+          const date = new Date(value)
+          return !Number.isNaN(date.getTime()) &&
+            `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}` === key
+        }).length,
+      ),
+    }
+  }, [articles, blogs])
+
+  const recentArticles = useMemo(
+    () =>
+      [...articles]
+        .sort(
+          (a, b) =>
+            new Date(getRecordDate(b) || 0).getTime() -
+            new Date(getRecordDate(a) || 0).getTime(),
+        )
+        .slice(0, 6),
+    [articles],
+  )
+
+  const recentBlogs = useMemo(
+    () =>
+      [...blogs]
+        .sort(
+          (a, b) =>
+            new Date(getRecordDate(b) || 0).getTime() -
+            new Date(getRecordDate(a) || 0).getTime(),
+        )
+        .slice(0, 5),
+    [blogs],
+  )
+
+  const recentActivity = useMemo(() => {
+    const articleItems = articles.map((article) => ({
+      id: `article-${article.id}`,
+      title: article.title || 'Untitled article',
+      type: 'Article',
+      date: getRecordDate(article) || '',
+      detail: getStatusLabel(article.status),
+    }))
+
+    const blogItems = blogs.map((blog) => ({
+      id: `blog-${blog.id}`,
+      title: blog.title || 'Untitled blog',
+      type: 'Blog',
+      date: getRecordDate(blog) || '',
+      detail: blog.status
+        ? getStatusLabel(blog.status)
+        : `${blog.likes_count ?? 0} likes`,
+    }))
+
+    return [...articleItems, ...blogItems]
+      .filter((item) => item.date && !Number.isNaN(new Date(item.date).getTime()))
+      .sort(
+        (a, b) =>
+          new Date(b.date).getTime() - new Date(a.date).getTime(),
+      )
+      .slice(0, 8)
+  }, [articles, blogs])
+
+  const startProfileEditing = useCallback(() => {
+    setProfileDraft({ ...(profile || {}) })
+    setProfileSaveMessage('')
+    setProfileSaveError('')
+    setEditingProfile(true)
+  }, [profile])
+
+  const cancelProfileEditing = useCallback(() => {
+    setProfileDraft({ ...(profile || {}) })
+    setEditingProfile(false)
+    setProfileSaveError('')
+    setProfileSaveMessage('')
+  }, [profile])
+
+  const updateProfileField = useCallback(
+    (field: keyof AuthorProfile, value: string) => {
+      setProfileDraft((current) => ({ ...current, [field]: value }))
+      setProfileSaveError('')
+      setProfileSaveMessage('')
+    },
+    [],
+  )
+
+  const saveProfileChanges = useCallback(
+    async (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      if (profileSaving) return
+
+      setProfileSaving(true)
+      setProfileSaveError('')
+      setProfileSaveMessage('')
+
+      try {
+        const response = await authenticatedFetch(PROFILE_ENDPOINT, {
+          method: 'PUT',
+          body: JSON.stringify(profileDraft),
+        })
+        const responseData: unknown = await response.json().catch(() => null)
+
+        if (!response.ok) {
+          throw new Error(
+            getErrorMessage(
+              responseData,
+              `Could not save your profile (HTTP ${response.status}).`,
+            ),
+          )
+        }
+
+        const responseObject = asObject(responseData)
+        const returnedProfile = asObject(
+          responseObject.profile ??
+            responseObject.author_profile ??
+            responseObject.data ??
+            responseObject,
+        )
+
+        const savedProfile = (
+          Object.keys(returnedProfile).length > 0
+            ? returnedProfile
+            : profileDraft
+        ) as AuthorProfile
+
+        setProfile(savedProfile)
+        setProfileDraft({ ...savedProfile })
+        setEditingProfile(false)
+        setProfileSaveMessage('Your author profile has been saved successfully.')
+      } catch (saveError) {
+        setProfileSaveError(
+          saveError instanceof Error
+            ? saveError.message
+            : 'Could not save your profile.',
+        )
+      } finally {
+        setProfileSaving(false)
+      }
+    },
+    [authenticatedFetch, profileDraft, profileSaving],
+  )
+
+  function renderProfile() {
+    if (profileLoading) {
+      return (
+        <div className="ad-state">
+          <span className="ad-spinner" />
+          <p>Loading your saved author profile…</p>
+        </div>
+      )
+    }
+
+    if (profileError) {
+      return (
+        <div className="ad-alert ad-alert-error">
+          <strong>Unable to load profile</strong>
+          <p>{profileError}</p>
+          <button className="ad-button" onClick={() => void fetchProfile()}>
+            Try again
+          </button>
+        </div>
+      )
+    }
+
+    if (!profile) {
+      return (
+        <div className="ad-empty">
+          <div className="ad-empty-icon">♙</div>
+          <h3>No saved profile was returned</h3>
+          <p>The server did not return an author profile.</p>
+          <button className="ad-button" onClick={() => void fetchProfile()}>
+            Refresh profile
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <div className="ad-profile-content">
+        {profileSaveMessage && (
+          <div className="ad-alert ad-alert-success" role="status">
+            {profileSaveMessage}
+          </div>
+        )}
+        {profileSaveError && (
+          <div className="ad-alert ad-alert-error" role="alert">
+            {profileSaveError}
+          </div>
+        )}
+
+        <div className="ad-profile-hero">
+          <div className="ad-avatar ad-avatar-large">{initials || 'A'}</div>
+          <div className="ad-profile-hero-copy">
+            <span className="ad-eyebrow">AUTHOR PROFILE</span>
+            <h2>{authorName}</h2>
+            <p>
+              {displayValue(profile.professional_title)} · {displayValue(profile.location)}
+            </p>
+          </div>
+          <div className="ad-profile-hero-actions">
+            <button className="ad-button" onClick={startProfileEditing}>
+              ✎ Edit profile
+            </button>
+            <button
+              className="ad-button ad-button-light"
+              onClick={() => void fetchProfile()}
+              disabled={profileSaving}
+            >
+              ↻ Refresh
+            </button>
+          </div>
+        </div>
+
+        {editingProfile ? (
+          <form className="ad-profile-edit-form" onSubmit={saveProfileChanges}>
+            {PROFILE_GROUPS.map((group) => (
+              <section className="ad-profile-section" key={group.title}>
+                <h3>{group.title}</h3>
+                <div className="ad-profile-grid">
+                  {group.fields.map((field) => {
+                    const value = profileDraft[field]
+                    const inputValue =
+                      typeof value === 'string' || typeof value === 'number'
+                        ? String(value)
+                        : ''
+                    const label = PROFILE_LABELS[field] || String(field)
+                    const inputType =
+                      field === 'email'
+                        ? 'email'
+                        : field === 'phone_number'
+                          ? 'tel'
+                          : field === 'portfolio_url' || field === 'linkedin_url'
+                            ? 'url'
+                            : field === 'years_of_experience'
+                              ? 'number'
+                              : 'text'
+
+                    return (
+                      <label className="ad-profile-edit-field" key={field}>
+                        <span className="ad-profile-edit-label">{label}</span>
+                        {LONG_TEXT_FIELDS.has(field) ? (
+                          <textarea
+                            className="ad-profile-input ad-profile-textarea"
+                            value={inputValue}
+                            onChange={(event) =>
+                              updateProfileField(field, event.target.value)
+                            }
+                            placeholder={`Enter ${label.toLowerCase()}`}
+                            rows={4}
+                          />
+                        ) : (
+                          <input
+                            className="ad-profile-input"
+                            type={inputType}
+                            min={field === 'years_of_experience' ? 0 : undefined}
+                            value={inputValue}
+                            onChange={(event) =>
+                              updateProfileField(field, event.target.value)
+                            }
+                            placeholder={`Enter ${label.toLowerCase()}`}
+                          />
+                        )}
+                      </label>
+                    )
+                  })}
+                </div>
+              </section>
+            ))}
+
+            <div className="ad-profile-edit-actions">
+              <button
+                type="button"
+                className="ad-button ad-button-light"
+                onClick={cancelProfileEditing}
+                disabled={profileSaving}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="ad-button" disabled={profileSaving}>
+                {profileSaving ? 'Saving changes…' : 'Save changes'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          PROFILE_GROUPS.map((group) => {
+            const fields = group.fields.filter((field) => {
+              const value = profile[field]
+              return value !== undefined && value !== null && value !== ''
+            })
+
+            return (
+              <section className="ad-profile-section" key={group.title}>
+                <h3>{group.title}</h3>
+                {fields.length === 0 ? (
+                  <p className="ad-muted">No saved information in this section.</p>
+                ) : (
+                  <div className="ad-profile-grid">
+                    {fields.map((field) => {
+                      const value = profile[field]
+                      const label = PROFILE_LABELS[field] || String(field)
+
+                      return (
+                        <div className="ad-profile-field" key={field}>
+                          <span>{label}</span>
+                          {typeof value === 'string' && /^https?:\/\//i.test(value) ? (
+                            <a href={value} target="_blank" rel="noreferrer">
+                              {value}
+                            </a>
+                          ) : (
+                            <p>{displayValue(value)}</p>
+                          )}
+                        </div>
+                      )
                     })}
                   </div>
-
-                  <div className="katiba-quote">
-                    “A well-informed citizen is a powerful citizen.”
-                  </div>
-                </div>
+                )}
               </section>
-
-              {/* STATISTICS */}
-              <section className="katiba-stat-grid">
-                <div className="katiba-stat-card">
-                  <div className="katiba-stat-icon">
-                    <Icon name="article" size={20} />
-                  </div>
-
-                  <div className="katiba-stat-title">
-                    Published Articles
-                  </div>
-
-                  <div className="katiba-stat-value">
-                    {load ? '...' : publishedArticles.length}
-                  </div>
-
-                  <div className="katiba-stat-change">
-                    Live in database
-                  </div>
-
-                  <div className="katiba-stat-note">
-                    Updated real-time
-                  </div>
-                </div>
-
-                <div className="katiba-stat-card">
-                  <div className="katiba-stat-icon amber">
-                    <Icon name="edit" size={20} />
-                  </div>
-
-                  <div className="katiba-stat-title">
-                    Under Review
-                  </div>
-
-                  <div className="katiba-stat-value">
-                    {load ? '...' : reviewArticles.length}
-                  </div>
-
-                  <div
-                    className="katiba-stat-change"
-                    style={{ color: '#b45309' }}
-                  >
-                    Awaiting moderation
-                  </div>
-
-                  <div className="katiba-stat-note">
-                    In editorial queue
-                  </div>
-                </div>
-
-                <div className="katiba-stat-card">
-                  <div className="katiba-stat-icon">
-                    <Icon name="edit" size={20} />
-                  </div>
-
-                  <div className="katiba-stat-title">
-                    Article Drafts
-                  </div>
-
-                  <div className="katiba-stat-value">
-                    {load ? '...' : draftArticles.length}
-                  </div>
-
-                  <div
-                    className="katiba-stat-change"
-                    style={{ color: '#8a969a' }}
-                  >
-                    Saved locally/cloud
-                  </div>
-
-                  <div className="katiba-stat-note">
-                    Work in progress
-                  </div>
-                </div>
-
-                <div className="katiba-stat-card">
-                  <div className="katiba-stat-icon blue">
-                    <Icon name="people" size={20} />
-                  </div>
-
-                  <div className="katiba-stat-title">
-                    Blog Posts / Likes
-                  </div>
-
-                  <div className="katiba-stat-value">
-                    {load
-                      ? '...'
-                      : `${blogs.length} / ${totalLikes}`}
-                  </div>
-
-                  <div className="katiba-stat-change">
-                    Civic engagement
-                  </div>
-
-                  <div className="katiba-stat-note">
-                    Community support
-                  </div>
-                </div>
-              </section>
-
-              {/* MIDDLE SECTION */}
-              <section className="katiba-middle">
-                <div className="katiba-card">
-                  <div className="katiba-card-header">
-                    <div>
-                      <h3 className="katiba-card-title">
-                        Content Reach Overview
-                      </h3>
-
-                      <div className="katiba-card-subtitle">
-                        Engagement across articles and community posts
-                      </div>
-                    </div>
-
-                    <div className="katiba-period">
-                      <button className="active">
-                        7 Days
-                      </button>
-
-                      <button>
-                        30 Days
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="katiba-chart">
-                    <svg
-                      viewBox="0 0 500 150"
-                      preserveAspectRatio="none"
-                    >
-                      <path
-                        d="M0 120 Q 75 40, 150 90 T 300 50 T 450 80 L 500 30 L 500 150 L 0 150 Z"
-                        fill="rgba(53, 212, 159, 0.15)"
-                      />
-
-                      <path
-                        d="M0 120 Q 75 40, 150 90 T 300 50 T 450 80 L 500 30"
-                        fill="none"
-                        stroke="#006f64"
-                        strokeWidth="3"
-                      />
-                    </svg>
-                  </div>
-                </div>
-
-                <div className="katiba-card">
-                  <div className="katiba-card-header">
-                    <div>
-                      <h3 className="katiba-card-title">
-                        Recent Activity
-                      </h3>
-
-                      <div className="katiba-card-subtitle">
-                        Latest platform updates
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="katiba-activity-list">
-                    {articles.slice(0, 3).map((item, idx) => (
-                      <div
-                        key={item.id || idx}
-                        className="katiba-activity-item"
-                      >
-                        <div className="katiba-activity-icon">
-                          <Icon
-                            name="article"
-                            size={16}
-                          />
-                        </div>
-
-                        <div className="katiba-activity-text">
-                          <div className="katiba-activity-title">
-                            {item.title}
-                          </div>
-
-                          <div className="katiba-activity-sub">
-                            Status: {item.status || 'Draft'}
-                          </div>
-                        </div>
-
-                        <div className="katiba-activity-time">
-                          {formatDate(item.created_at)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
-
-              {/* LOWER SECTION */}
-              <section className="katiba-lower">
-                <div className="katiba-card">
-                  <div className="katiba-card-header">
-                    <div>
-                      <h3 className="katiba-card-title">
-                        Articles Database
-                      </h3>
-
-                      <div className="katiba-card-subtitle">
-                        Recent stories & legal pieces
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="katiba-list">
-                    {filteredArticles.slice(0, 4).map(item => (
-                      <div
-                        key={item.id}
-                        className="katiba-list-row"
-                        onClick={() =>
-                          setSelectedItem({
-                            type: 'article',
-                            title: item.title,
-                            content: parseArticleContent(
-                              item.content
-                            ),
-                            meta: formatDate(
-                              item.created_at
-                            ),
-                            status: item.status,
-                          })
-                        }
-                      >
-                        <div className="katiba-thumb">
-                          <Icon
-                            name="article"
-                            size={16}
-                          />
-                        </div>
-
-                        <div className="katiba-list-info">
-                          <div className="katiba-list-title">
-                            {item.title}
-                          </div>
-
-                          <div className="katiba-list-meta">
-                            <span>
-                              {formatDate(item.created_at)}
-                            </span>
-
-                            <span
-                              className="katiba-tag"
-                              style={getStatusBadgeStyle(
-                                item.status
-                              )}
-                            >
-                              {item.status || 'Draft'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="katiba-card">
-                  <div className="katiba-card-header">
-                    <div>
-                      <h3 className="katiba-card-title">
-                        Blogs & Engagement
-                      </h3>
-
-                      <div className="katiba-card-subtitle">
-                        Community posts
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="katiba-list">
-                    {blogs.slice(0, 4).map(blog => (
-                      <div
-                        key={blog.id}
-                        className="katiba-list-row"
-                        onClick={() =>
-                          setSelectedItem({
-                            type: 'blog',
-                            title: blog.title,
-                            content: blog.content,
-                            meta: `@${
-                              blog.author_username ||
-                              'anonymous'
-                            } • ${formatDate(
-                              blog.created_at
-                            )}`,
-                          })
-                        }
-                      >
-                        <div
-                          className="katiba-thumb"
-                          style={{
-                            background:
-                              'linear-gradient(135deg, #2765c4, #35d49f)',
-                          }}
-                        >
-                          <Icon
-                            name="edit"
-                            size={16}
-                          />
-                        </div>
-
-                        <div className="katiba-list-info">
-                          <div className="katiba-list-title">
-                            {blog.title}
-                          </div>
-
-                          <div className="katiba-list-meta">
-                            <span>
-                              @
-                              {blog.author_username ||
-                                'anonymous'}
-                            </span>
-
-                            <span>
-                              ❤️ {blog.likes_count || 0}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="katiba-card">
-                  <div className="katiba-card-header">
-                    <div>
-                      <h3 className="katiba-card-title">
-                        Quick Actions
-                      </h3>
-
-                      <div className="katiba-card-subtitle">
-                        Shortcuts for management
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="katiba-quick-list">
-                    <div
-                      className="katiba-quick-row"
-                      onClick={() =>
-                        setTab('articles')
-                      }
-                    >
-                      <div className="katiba-quick-icon">
-                        <Icon
-                          name="plus"
-                          size={16}
-                        />
-                      </div>
-
-                      <span>
-                        New Article
-                      </span>
-
-                      <div className="katiba-quick-arrow">
-                        <Icon
-                          name="arrow"
-                          size={14}
-                        />
-                      </div>
-                    </div>
-
-                    <div
-                      className="katiba-quick-row"
-                      onClick={() =>
-                        setTab('news')
-                      }
-                    >
-                      <div className="katiba-quick-icon">
-                        <Icon
-                          name="news"
-                          size={16}
-                        />
-                      </div>
-
-                      <span>
-                        News Blueprint
-                      </span>
-
-                      <div className="katiba-quick-arrow">
-                        <Icon
-                          name="arrow"
-                          size={14}
-                        />
-                      </div>
-                    </div>
-
-                    <div
-                      className="katiba-quick-row"
-                      onClick={() =>
-                        setTab('blogs')
-                      }
-                    >
-                      <div className="katiba-quick-icon">
-                        <Icon
-                          name="edit"
-                          size={16}
-                        />
-                      </div>
-
-                      <span>
-                        Browse Blogs Feed
-                      </span>
-
-                      <div className="katiba-quick-arrow">
-                        <Icon
-                          name="arrow"
-                          size={14}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* SELECTED ITEM VIEWER OVERLAY */}
-              {selectedItem && (
-                <div
-                  className="katiba-viewer-overlay"
-                  onClick={() =>
-                    setSelectedItem(null)
-                  }
-                >
-                  <div
-                    className="katiba-viewer"
-                    onClick={e =>
-                      e.stopPropagation()
-                    }
-                  >
-                    <div className="katiba-viewer-top">
-                      <span
-                        className="katiba-tag"
-                        style={getStatusBadgeStyle(
-                          selectedItem.status
-                        )}
-                      >
-                        {selectedItem.type.toUpperCase()}
-                      </span>
-
-                      <button
-                        className="katiba-close"
-                        onClick={() =>
-                          setSelectedItem(null)
-                        }
-                      >
-                        Close
-                      </button>
-                    </div>
-
-                    <h1>
-                      {selectedItem.title}
-                    </h1>
-
-                    <div className="katiba-viewer-content">
-                      {selectedItem.content}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </main>
+            )
+          })
+        )}
       </div>
-    </>
-  );
-};
+    )
+  }
+
+  function renderRecentArticles() {
+    if (loading) return <div className="ad-inline-loading">Loading article records…</div>
+
+    if (recentArticles.length === 0) {
+      return (
+        <div className="ad-empty compact">
+          <h3>No articles returned</h3>
+          <p>Create an article or check your API permissions.</p>
+          <button className="ad-button" onClick={() => changeTab('articles')}>
+            Create article
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <div className="ad-table-wrap">
+        <table className="ad-table">
+          <thead>
+            <tr>
+              <th>Article</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {recentArticles.map((article) => (
+              <tr key={article.id}>
+                <td>
+                  <strong>{article.title || 'Untitled article'}</strong>
+                  <p>{(article.content || '').replace(/<[^>]*>/g, ' ').slice(0, 100)}</p>
+                </td>
+                <td>{getRecordCategory(article)}</td>
+                <td>
+                  <span className={`ad-status ad-status-${normalizeStatus(article.status)}`}>
+                    {getStatusLabel(article.status)}
+                  </span>
+                </td>
+                <td>{formatDate(getRecordDate(article))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  function renderRecentBlogs() {
+    if (loading) return <div className="ad-inline-loading">Loading blog records…</div>
+
+    if (recentBlogs.length === 0) {
+      return (
+        <div className="ad-empty compact">
+          <h3>No blogs returned</h3>
+          <p>The blogs API did not return any records.</p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="ad-blog-list">
+        {recentBlogs.map((blog) => (
+          <article className="ad-blog-row" key={blog.id}>
+            <div className="ad-blog-icon">✎</div>
+            <div className="ad-blog-main">
+              <strong>{blog.title || 'Untitled blog'}</strong>
+              <p>
+                {blog.author_username || 'Author'} · {formatDate(getRecordDate(blog))}
+                {' · '}{getRecordCategory(blog)}
+              </p>
+            </div>
+            <span className="ad-blog-likes">♡ {blog.likes_count ?? 0}</span>
+          </article>
+        ))}
+      </div>
+    )
+  }
+
+  function renderDashboard() {
+    return (
+      <>
+        <section className="ad-welcome">
+          <div>
+            <span className="ad-eyebrow">KATIBA NEWS · AUTHOR WORKSPACE</span>
+            <h1>Welcome back, {authorName.split(' ')[0]}.</h1>
+            <p>Your content, publishing activity, and performance at a glance.</p>
+            {lastUpdated && (
+              <span className="ad-last-updated">
+                <i /> Last refreshed {formatDateTime(lastUpdated)}
+              </span>
+            )}
+          </div>
+          <div className="ad-welcome-actions">
+            <button
+              className="ad-button ad-button-light"
+              onClick={() => void fetchContent(true)}
+              disabled={refreshing}
+            >
+              <span className={refreshing ? 'ad-refreshing' : ''}>↻</span>
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
+            <button className="ad-button" onClick={() => changeTab('articles')}>
+              ＋ New article
+            </button>
+          </div>
+        </section>
+
+        {error && (
+          <div className="ad-alert ad-alert-error">
+            <strong>Dashboard data could not be fully loaded</strong>
+            <p>{error}</p>
+            <button className="ad-button" onClick={() => void fetchContent(true)}>
+              Try again
+            </button>
+          </div>
+        )}
+
+        <section className="ad-stats-grid">
+          <StatCard
+            label="Total articles"
+            value={loading ? '…' : formatNumber(articles.length)}
+            icon="▤"
+            detail="Article records returned by the API"
+            accent="green"
+          />
+          <StatCard
+            label="Total blogs"
+            value={loading ? '…' : formatNumber(blogs.length)}
+            icon="✎"
+            detail="Blog records returned by the API"
+            accent="blue"
+          />
+          <StatCard
+            label="Published articles"
+            value={loading ? '…' : formatNumber(publishedArticles)}
+            icon="✓"
+            detail="Articles marked published"
+            accent="green"
+          />
+          <StatCard
+            label="Draft articles"
+            value={loading ? '…' : formatNumber(draftArticles)}
+            icon="◷"
+            detail="Articles marked draft"
+            accent="purple"
+          />
+          <StatCard
+            label="Under review"
+            value={loading ? '…' : formatNumber(reviewArticles)}
+            icon="◌"
+            detail="Articles awaiting review"
+            accent="orange"
+          />
+          <StatCard
+            label="All content"
+            value={loading ? '…' : formatNumber(allContent.length)}
+            icon="▦"
+            detail="Articles and blogs combined"
+            accent="blue"
+          />
+        </section>
+
+        <section className="ad-chart-grid">
+          {loading ? (
+            <div className="ad-chart-card ad-chart-loading">
+              <span className="ad-spinner" />
+              <p>Loading weekly publishing data…</p>
+            </div>
+          ) : (
+            <LineChart
+              title="Weekly publishing activity"
+              subtitle="Content created each day over the last seven days"
+              labels={weeklyData.labels}
+              series={[
+                { name: 'Articles', values: weeklyData.articleValues, color: '#159b76' },
+                { name: 'Blogs', values: weeklyData.blogValues, color: '#7770d6' },
+              ]}
+            />
+          )}
+
+          <PieChart
+            title="Article status"
+            subtitle="Status distribution from returned article records"
+            data={countByStatus(articles)}
+          />
+        </section>
+
+        <section className="ad-chart-grid">
+          <BarChart
+            title="Monthly publishing"
+            subtitle="New article and blog records over the last 12 months"
+            labels={monthlyData.labels}
+            series={[
+              { name: 'Articles', values: monthlyData.articleValues, color: '#159b76' },
+              { name: 'Blogs', values: monthlyData.blogValues, color: '#7770d6' },
+            ]}
+          />
+
+          <PieChart
+            title="Blog status"
+            subtitle={
+              blogsWithStatus.length
+                ? `${blogsWithStatus.length} of ${blogs.length} blogs have a status`
+                : 'Your current blogs response does not include status values'
+            }
+            data={countByStatus(blogsWithStatus)}
+          />
+        </section>
+
+        <section className="ad-stats-grid ad-stats-grid-secondary">
+          <StatCard
+            label="Published blogs"
+            value={loading ? '…' : blogsWithStatus.length ? publishedBlogs : '—'}
+            icon="✓"
+            detail={blogsWithStatus.length ? 'Blogs marked published' : 'Status not provided by the API'}
+          />
+          <StatCard
+            label="Blog drafts"
+            value={loading ? '…' : blogsWithStatus.length ? draftBlogs : '—'}
+            icon="✎"
+            detail={blogsWithStatus.length ? 'Blogs marked draft' : 'Status not provided by the API'}
+            accent="purple"
+          />
+          <StatCard
+            label="Blogs under review"
+            value={loading ? '…' : blogsWithStatus.length ? reviewBlogs : '—'}
+            icon="◷"
+            detail={blogsWithStatus.length ? 'Blogs awaiting review' : 'Status not provided by the API'}
+            accent="orange"
+          />
+          <StatCard
+            label="Total blog likes"
+            value={loading ? '…' : formatNumber(totalBlogLikes)}
+            icon="♡"
+            detail="Likes reported by the blogs API"
+            accent="purple"
+          />
+        </section>
+
+        <section className="ad-chart-grid">
+          <CategoryChart
+            title="Article categories"
+            subtitle="Distribution based on category fields returned by the API"
+            records={articles}
+          />
+          <CategoryChart
+            title="Blog categories"
+            subtitle="Distribution based on category fields returned by the API"
+            records={blogs}
+          />
+        </section>
+
+        <section className="ad-stats-grid ad-stats-grid-secondary">
+          <StatCard
+            label="Article views"
+            value={loading ? '…' : formatNumber(totalArticleViews)}
+            icon="◉"
+            detail="Only available if the API returns view counts"
+            accent="blue"
+          />
+          <StatCard
+            label="Blog views"
+            value={loading ? '…' : formatNumber(totalBlogViews)}
+            icon="↗"
+            detail="Only available if the API returns view counts"
+            accent="blue"
+          />
+          <StatCard
+            label="Articles this week"
+            value={loading ? '…' : formatNumber(weeklyData.articleValues.reduce((a, b) => a + b, 0))}
+            icon="▦"
+            detail="Based on article creation dates"
+          />
+          <StatCard
+            label="Blogs this week"
+            value={loading ? '…' : formatNumber(weeklyData.blogValues.reduce((a, b) => a + b, 0))}
+            icon="▧"
+            detail="Based on blog creation dates"
+            accent="purple"
+          />
+        </section>
+
+        <section className="ad-panel">
+          <PanelHeading
+            eyebrow="YOUR WORK"
+            title="Recent articles"
+            subtitle="The latest article records returned by your API."
+            action={
+              <button className="ad-text-button" onClick={() => changeTab('articles')}>
+                Open editor →
+              </button>
+            }
+          />
+          {renderRecentArticles()}
+        </section>
+
+        <section className="ad-two-column">
+          <div className="ad-panel">
+            <PanelHeading
+              eyebrow="BLOG CONTENT"
+              title="Recent blogs"
+              action={
+                <button className="ad-text-button" onClick={() => changeTab('blogs')}>
+                  View blogs →
+                </button>
+              }
+            />
+            {renderRecentBlogs()}
+          </div>
+
+          <div className="ad-panel">
+            <PanelHeading
+              eyebrow="CONTENT TIMELINE"
+              title="Recent activity"
+              subtitle="Activity inferred from available content records."
+            />
+            {loading ? (
+              <p className="ad-muted">Loading recent activity…</p>
+            ) : recentActivity.length === 0 ? (
+              <div className="ad-empty compact">
+                <h3>No dated activity available</h3>
+                <p>The APIs have not returned records with usable dates.</p>
+              </div>
+            ) : (
+              <div className="ad-activity-list">
+                {recentActivity.slice(0, 7).map((activity) => (
+                  <div className="ad-activity-row" key={activity.id}>
+                    <div className={`ad-activity-marker ${activity.type === 'Blog' ? 'blog-marker' : ''}`}>
+                      {activity.type === 'Article' ? '▤' : '✎'}
+                    </div>
+                    <div className="ad-activity-copy">
+                      <strong>{activity.title}</strong>
+                      <p>{activity.type} · {activity.detail}</p>
+                      <span>{formatDateTime(activity.date)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="ad-activity-note">
+              This is not a complete audit log. It is built from dates and fields
+              returned by the article and blog APIs.
+            </p>
+          </div>
+        </section>
+      </>
+    )
+  }
+
+  function renderAnalytics() {
+    return (
+      <>
+        <section className="ad-page-heading">
+          <div>
+            <span className="ad-eyebrow">PERFORMANCE CENTRE</span>
+            <h1>Publishing analytics</h1>
+            <p>Weekly, monthly, status, and category breakdowns for your content.</p>
+          </div>
+          <button
+            className="ad-button ad-button-light"
+            onClick={() => void fetchContent(true)}
+            disabled={refreshing}
+          >
+            ↻ {refreshing ? 'Refreshing…' : 'Refresh analytics'}
+          </button>
+        </section>
+
+        {error && (
+          <div className="ad-alert ad-alert-error">
+            <strong>Analytics could not be fully refreshed</strong>
+            <p>{error}</p>
+          </div>
+        )}
+
+        <section className="ad-stats-grid">
+          <StatCard label="Articles" value={loading ? '…' : articles.length} icon="▤" detail="Loaded article records" />
+          <StatCard label="Blogs" value={loading ? '…' : blogs.length} icon="✎" detail="Loaded blog records" accent="purple" />
+          <StatCard label="Published articles" value={loading ? '…' : publishedArticles} icon="✓" detail="Published article status" />
+          <StatCard label="Draft articles" value={loading ? '…' : draftArticles} icon="◷" detail="Draft article status" accent="purple" />
+          <StatCard label="Under review" value={loading ? '…' : reviewArticles} icon="◌" detail="Review article status" accent="orange" />
+          <StatCard label="Blog likes" value={loading ? '…' : formatNumber(totalBlogLikes)} icon="♡" detail="Backend-reported likes" accent="blue" />
+        </section>
+
+        <section className="ad-chart-grid">
+          <LineChart
+            title="Weekly activity"
+            subtitle="Content created each day over the last seven days"
+            labels={weeklyData.labels}
+            series={[
+              { name: 'Articles', values: weeklyData.articleValues, color: '#159b76' },
+              { name: 'Blogs', values: weeklyData.blogValues, color: '#7770d6' },
+            ]}
+          />
+          <PieChart
+            title="Article status breakdown"
+            subtitle="Counts and percentages"
+            data={countByStatus(articles)}
+          />
+        </section>
+
+        <section className="ad-chart-grid">
+          <BarChart
+            title="Monthly content comparison"
+            subtitle="Monthly article and blog creation for the last 12 months"
+            labels={monthlyData.labels}
+            series={[
+              { name: 'Articles', values: monthlyData.articleValues, color: '#159b76' },
+              { name: 'Blogs', values: monthlyData.blogValues, color: '#7770d6' },
+            ]}
+          />
+          <PieChart
+            title="Blog status breakdown"
+            subtitle={
+              blogsWithStatus.length
+                ? 'Counts from blogs that have a status field'
+                : 'No blog status values were returned by the API'
+            }
+            data={countByStatus(blogsWithStatus)}
+          />
+        </section>
+
+        <section className="ad-chart-grid">
+          <CategoryChart
+            title="Article categories"
+            subtitle="Content categories returned by the API"
+            records={articles}
+          />
+          <CategoryChart
+            title="Blog categories"
+            subtitle="Content categories returned by the API"
+            records={blogs}
+          />
+        </section>
+
+        <section className="ad-panel">
+          <PanelHeading
+            eyebrow="MONTHLY REPORT"
+            title="Monthly publishing totals"
+            subtitle="Creation counts based on the records currently loaded."
+          />
+          <div className="ad-table-wrap">
+            <table className="ad-table">
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Articles</th>
+                  <th>Blogs</th>
+                  <th>Combined total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {monthlyData.labels.map((month, index) => (
+                  <tr key={`${month}-${index}`}>
+                    <td><strong>{month}</strong></td>
+                    <td>{monthlyData.articleValues[index]}</td>
+                    <td>{monthlyData.blogValues[index]}</td>
+                    <td>
+                      <strong>
+                        {monthlyData.articleValues[index] + monthlyData.blogValues[index]}
+                      </strong>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </>
+    )
+  }
+
+  function renderContent() {
+    if (tab === 'dashboard') return renderDashboard()
+    if (tab === 'analytics') return renderAnalytics()
+
+    if (tab === 'articles') {
+      return (
+        <section className="ad-editor-panel">
+          <div className="ad-page-heading">
+            <div>
+              <span className="ad-eyebrow">EDITORIAL WORKSPACE</span>
+              <h1>Article editor</h1>
+              <p>Create and manage your articles.</p>
+            </div>
+            <button className="ad-button ad-button-light" onClick={() => changeTab('dashboard')}>
+              ← Dashboard
+            </button>
+          </div>
+          <ArticleEditor />
+        </section>
+      )
+    }
+
+    if (tab === 'blogs') {
+      return (
+        <section className="ad-panel">
+          <div className="ad-page-heading">
+            <div>
+              <span className="ad-eyebrow">COMMUNITY WRITING</span>
+              <h1>Blogs feed</h1>
+              <p>Explore blog content connected to your account.</p>
+            </div>
+          </div>
+          <BlogView />
+        </section>
+      )
+    }
+
+    if (tab === 'profile') {
+      return (
+        <section className="ad-panel">
+          <div className="ad-page-heading">
+            <div>
+              <span className="ad-eyebrow">ACCOUNT INFORMATION</span>
+              <h1>My profile</h1>
+              <p>Your author information retrieved from the server.</p>
+            </div>
+          </div>
+          {renderProfile()}
+        </section>
+      )
+    }
+
+    const pageInfo: Partial<Record<Tab, { title: string; description: string; icon: string }>> = {
+      news: {
+        title: 'News',
+        description: 'Your news-management workspace.',
+        icon: '▧',
+      },
+      media: {
+        title: 'Media library',
+        description: 'Manage images and other media resources.',
+        icon: '▣',
+      },
+      comments: {
+        title: 'Comments',
+        description: 'Review reader conversations and moderate comments.',
+        icon: '☏',
+      },
+      settings: {
+        title: 'Settings',
+        description: 'Manage your account and workspace preferences.',
+        icon: '⚙',
+      },
+    }
+
+    const info = pageInfo[tab]
+    if (!info) return null
+
+    return (
+      <section className="ad-panel">
+        <div className="ad-page-heading">
+          <div>
+            <span className="ad-eyebrow">WORKSPACE</span>
+            <h1>{info.title}</h1>
+            <p>{info.description}</p>
+          </div>
+        </div>
+        <div className="ad-empty">
+          <div className="ad-empty-icon">{info.icon}</div>
+          <h3>{info.title} is ready for integration</h3>
+          <p>
+            This section still needs its corresponding backend endpoint or
+            management component. No placeholder records are being invented.
+          </p>
+          <button className="ad-button" onClick={() => changeTab('dashboard')}>
+            Back to dashboard
+          </button>
+        </div>
+      </section>
+    )
+  }
+
+  if (!session) {
+    return (
+      <div className="ad-auth-required">
+        <h1>Sign in required</h1>
+        <p>Please sign in to access your author dashboard.</p>
+        <button className="ad-button" onClick={logout}>Go to sign in</button>
+      </div>
+    )
+  }
+
+  const currentNavItem = navItems.find((item) => item.id === tab)
+
+  return (
+    <div className="ad-shell">
+      <style>{`
+        .ad-shell {
+          --ink:#182b26;--muted:#788780;--green:#087f68;
+          --green-dark:#066650;--border:#e5ece8;--surface:#fff;
+          min-height:100vh;display:flex;background:#f6f8f7;color:var(--ink);
+          font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+        }
+        .ad-shell *{box-sizing:border-box}
+        .ad-shell button,.ad-shell input,.ad-shell textarea{font:inherit}
+        .ad-shell button:focus-visible,.ad-shell a:focus-visible,.ad-shell input:focus-visible,.ad-shell textarea:focus-visible{outline:3px solid #82d7bb;outline-offset:3px}
+        .ad-sidebar{width:235px;flex:0 0 235px;background:#142925;color:#e6f1ed;min-height:100vh;padding:22px 13px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+        .ad-brand{display:flex;align-items:center;gap:11px;padding:5px 10px 29px}
+        .ad-brand-mark{display:grid;place-items:center;width:39px;height:39px;border-radius:12px;background:#6be0b5;color:#102923;font-weight:900;font-size:20px}
+        .ad-brand strong{display:block;color:#fff;font-size:16px;letter-spacing:-.5px}
+        .ad-brand small{display:block;color:#9db8af;font-size:9px;margin-top:4px;letter-spacing:1.2px}
+        .ad-nav-label{padding:0 12px 10px;color:#8ba49c;font-size:10px;font-weight:800;letter-spacing:1.4px}
+        .ad-nav{display:grid;gap:5px}
+        .ad-nav-button{display:flex;align-items:center;gap:12px;width:100%;min-height:42px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:#c1d0ca;cursor:pointer;text-align:left;font-size:12px;font-weight:600;transition:background .15s,color .15s}
+        .ad-nav-button:hover{background:#21413a;color:white}
+        .ad-nav-button.active{color:white;background:#087f68;box-shadow:0 5px 14px #061d1930}
+        .ad-nav-icon{width:20px;text-align:center;font-size:18px}
+        .ad-nav-separator{height:1px;margin:13px 8px;background:#304943}
+        .ad-nav-button.ad-logout{color:#ffc5c5}
+        .ad-nav-button.ad-logout:hover{background:#4b2c2c;color:white}
+        .ad-sidebar-bottom{margin-top:auto;padding:18px 8px 0}
+        .ad-sidebar-note{padding:14px;border:1px solid #2c4941;border-radius:12px;background:#19362f}
+        .ad-sidebar-note strong{font-size:11px;color:#e5f8f0}
+        .ad-sidebar-note p{color:#a4bdb5;font-size:10px;line-height:1.7;margin:8px 0 0}
+        .ad-main{flex:1;min-width:0}
+        .ad-topbar{min-height:72px;display:flex;align-items:center;gap:16px;padding:12px 30px;background:#fff;border-bottom:1px solid var(--border)}
+        .ad-topbar-title{font-size:13px;font-weight:800}
+        .ad-topbar-subtitle{display:block;color:var(--muted);font-size:10px;margin-top:4px;font-weight:400}
+        .ad-search{display:flex;align-items:center;gap:9px;margin-left:auto;width:min(320px,40%);padding:0 12px;height:38px;border-radius:10px;border:1px solid #e7eeea;background:#f8faf9;color:#7b8b85}
+        .ad-search input{min-width:0;width:100%;border:0;outline:none;background:transparent;color:var(--ink);font-size:12px}
+        .ad-user-chip{display:flex;align-items:center;gap:9px;padding-left:7px}
+        .ad-avatar{display:grid;place-items:center;width:35px;height:35px;flex-shrink:0;border-radius:50%;background:#dcf6e9;color:#08745f;font-weight:850;font-size:12px}
+        .ad-user-name{font-size:11px;font-weight:750}
+        .ad-user-role{display:block;margin-top:3px;color:var(--muted);font-size:10px}
+        .ad-content{width:100%;max-width:1700px;padding:29px 30px 48px;margin:0 auto}
+        .ad-welcome{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:25px}
+        .ad-welcome h1,.ad-page-heading h1{font-size:clamp(24px,3vw,32px);letter-spacing:-1.15px;margin:8px 0;line-height:1.2;font-weight:800}
+        .ad-welcome p,.ad-page-heading p{color:var(--muted);font-size:12px;margin:0;line-height:1.7}
+        .ad-eyebrow{display:block;color:#07866c;font-size:9px;font-weight:850;letter-spacing:1.5px;text-transform:uppercase}
+        .ad-last-updated{display:flex;align-items:center;gap:7px;margin-top:10px;color:#7e8c86;font-size:10px}
+        .ad-last-updated i{width:6px;height:6px;border-radius:50%;background:#159b76}
+        .ad-welcome-actions{display:flex;gap:9px;flex-wrap:wrap}
+        .ad-button{display:inline-flex;justify-content:center;align-items:center;gap:8px;border:0;border-radius:9px;background:var(--green);color:#fff;padding:11px 15px;font-size:11px;font-weight:750;cursor:pointer;transition:background .15s,transform .15s}
+        .ad-button:hover{background:var(--green-dark);transform:translateY(-1px)}
+        .ad-button:disabled{opacity:.65;cursor:wait;transform:none}
+        .ad-button-light{background:#fff;color:var(--ink);border:1px solid var(--border)}
+        .ad-button-light:hover{background:#f1f7f4}
+        .ad-refreshing{display:inline-block;animation:ad-spin .7s linear infinite}
+        .ad-stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
+        .ad-stats-grid-secondary{grid-template-columns:repeat(4,minmax(0,1fr))}
+        .ad-stat{min-width:0;position:relative;overflow:hidden;padding:18px 19px;border-radius:13px;border:1px solid var(--border);background:#fff;box-shadow:0 2px 8px #163b2a05}
+        .ad-stat:before{content:"";position:absolute;top:0;left:0;width:3px;height:100%;background:#159b76}
+        .ad-stat-blue:before{background:#3984d6}
+        .ad-stat-purple:before{background:#7770d6}
+        .ad-stat-orange:before{background:#e6a23c}
+        .ad-stat-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+        .ad-stat-label{color:var(--muted);font-size:11px;font-weight:650}
+        .ad-stat-icon{display:grid;place-items:center;width:33px;height:33px;border-radius:10px;background:#eaf8f1;color:#087b64;font-size:16px}
+        .ad-stat-blue .ad-stat-icon{background:#edf5ff;color:#3984d6}
+        .ad-stat-purple .ad-stat-icon{background:#f1efff;color:#7770d6}
+        .ad-stat-orange .ad-stat-icon{background:#fff4df;color:#c18318}
+        .ad-stat-value{display:block;margin-top:14px;font-size:29px;line-height:1.1;letter-spacing:-1px;font-weight:850;overflow-wrap:anywhere}
+        .ad-stat-foot{margin-top:8px;color:#89958f;font-size:10px;line-height:1.5}
+        .ad-chart-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:17px;margin-bottom:19px}
+        .ad-chart-card{min-width:0;padding:21px;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 2px 8px #163b2a04}
+        .ad-chart-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+        .ad-chart-heading h3{margin:0;font-size:13px;letter-spacing:-.2px;font-weight:800}
+        .ad-chart-heading p{margin:7px 0 0;color:var(--muted);font-size:10px;line-height:1.6}
+        .ad-chart-total{text-align:right;flex-shrink:0}
+        .ad-chart-total strong{display:block;font-size:22px;letter-spacing:-.7px}
+        .ad-chart-total span{color:var(--muted);font-size:10px}
+        .ad-chart-scroll{width:100%;overflow-x:auto;margin-top:19px}
+        .ad-svg-chart{display:block;width:100%;min-width:330px;height:auto;overflow:visible}
+        .ad-chart-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:13px}
+        .ad-chart-legend span{display:inline-flex;align-items:center;gap:7px;color:#72817a;font-size:10px}
+        .ad-chart-legend i{width:8px;height:8px;border-radius:3px;display:inline-block}
+        .ad-pie-layout{display:grid;grid-template-columns:minmax(130px,.85fr) minmax(0,1fr);align-items:center;gap:14px;margin-top:12px}
+        .ad-pie-graphic{min-width:0;display:flex;justify-content:center;align-items:center}
+        .ad-pie-graphic svg{display:block;width:100%;max-width:190px;height:auto}
+        .ad-pie-legend{display:grid;gap:12px;min-width:0}
+        .ad-pie-legend-row{display:grid;grid-template-columns:minmax(0,1fr) 28px 38px;gap:7px;align-items:center;font-size:10px}
+        .ad-pie-legend-name{display:flex;align-items:center;gap:7px;min-width:0;color:#61716a}
+        .ad-pie-legend-name>span{overflow-wrap:anywhere}
+        .ad-pie-legend-name i{width:8px;height:8px;border-radius:3px;flex-shrink:0}
+        .ad-pie-legend-row strong{text-align:right;color:#253a32}
+        .ad-pie-percent{text-align:right;color:#85918b;font-size:9px}
+        .ad-chart-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;min-height:160px;color:var(--muted);font-size:11px;text-align:center}
+        .ad-chart-empty p{line-height:1.7}
+        .ad-pie-empty{display:grid;place-items:center;width:85px;height:85px;border:13px solid #edf2ef;border-radius:50%;color:#86938c;font-size:18px;font-weight:800}
+        .ad-category-list{display:grid;gap:15px;margin-top:22px}
+        .ad-category-row{display:grid;grid-template-columns:minmax(0,1fr) 35px;gap:7px 10px;align-items:center}
+        .ad-category-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#5e6f67;font-size:10px;min-width:0}
+        .ad-category-top>span{display:flex;align-items:center;gap:7px;min-width:0;overflow-wrap:anywhere}
+        .ad-category-top i{display:inline-block;width:8px;height:8px;border-radius:3px;flex-shrink:0}
+        .ad-category-top strong{color:#273b33}
+        .ad-category-row .ad-progress-track{grid-column:1/2}
+        .ad-category-percent{grid-column:2;grid-row:1/3;color:#839089;text-align:right;font-size:10px}
+        .ad-progress-track{height:7px;overflow:hidden;border-radius:10px;background:#eef2ef}
+        .ad-progress-fill{height:100%;border-radius:10px;transition:width .3s}
+        .ad-panel,.ad-editor-panel{margin-bottom:20px;padding:22px;background:#fff;border:1px solid var(--border);border-radius:14px;min-width:0}
+        .ad-panel-heading,.ad-page-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:20px}
+        .ad-panel-heading h2{margin:7px 0 0;font-size:17px;letter-spacing:-.4px;font-weight:800}
+        .ad-section-subtitle{margin:7px 0 0;color:var(--muted);font-size:11px;line-height:1.6}
+        .ad-text-button{border:0;background:transparent;color:var(--green);font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
+        .ad-table-wrap{width:100%;overflow-x:auto}
+        .ad-table{width:100%;border-collapse:collapse;text-align:left;min-width:650px}
+        .ad-table th{padding:12px 10px;border-bottom:1px solid var(--border);color:#81918a;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.7px}
+        .ad-table td{padding:14px 10px;border-bottom:1px solid #eef2f0;color:#596a63;font-size:10px;vertical-align:top}
+        .ad-table tbody tr:last-child td{border-bottom:0}
+        .ad-table td strong{display:block;color:#20352d;font-size:11px}
+        .ad-table td p{max-width:440px;margin:5px 0 0;line-height:1.6;color:#87958e}
+        .ad-status{display:inline-block;border-radius:20px;padding:5px 9px;font-size:9px;font-weight:750;background:#edf0ef;color:#596a65;white-space:nowrap}
+        .ad-status-published{background:#e4f7ed;color:#087f55}
+        .ad-status-draft{background:#f0edff;color:#6b58b4}
+        .ad-status-under-review,.ad-status-under_review,.ad-status-in_review,.ad-status-pending_review{background:#fff3d7;color:#a76b0b}
+        .ad-status-rejected{background:#fff0ef;color:#b74d49}
+        .ad-status-scheduled{background:#edf5ff;color:#2e70bd}
+        .ad-blog-list{display:grid}
+        .ad-blog-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #edf1ef}
+        .ad-blog-row:last-child{border-bottom:0}
+        .ad-blog-icon{display:grid;place-items:center;width:37px;height:37px;border-radius:10px;background:#edf7f2;color:#087f68;font-size:17px;flex-shrink:0}
+        .ad-blog-main{flex:1;min-width:0}
+        .ad-blog-row strong{display:block;font-size:11px;overflow-wrap:anywhere}
+        .ad-blog-row p{margin:5px 0 0;font-size:10px;color:var(--muted);line-height:1.5}
+        .ad-blog-likes{color:#6c7d77;font-size:10px;white-space:nowrap}
+        .ad-two-column{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:17px}
+        .ad-two-column .ad-panel{min-width:0}
+        .ad-activity-list{display:grid}
+        .ad-activity-row{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid #edf1ef}
+        .ad-activity-row:last-child{border-bottom:0}
+        .ad-activity-marker{width:31px;height:31px;display:grid;place-items:center;flex-shrink:0;border-radius:9px;background:#e7f7ee;color:#087f68}
+        .ad-activity-marker.blog-marker{background:#f0edff;color:#6b58b4}
+        .ad-activity-copy{min-width:0;flex:1}
+        .ad-activity-copy strong{display:block;font-size:11px;overflow-wrap:anywhere}
+        .ad-activity-copy p{margin:5px 0;color:#788981;font-size:10px}
+        .ad-activity-copy>span{color:#9aa69f;font-size:9px}
+        .ad-activity-note{margin:14px 0 0;color:#8b9892;font-size:9px;line-height:1.7}
+        .ad-profile-hero{display:flex;align-items:center;gap:16px;padding:20px;margin-bottom:18px;border:1px solid #dbeee5;border-radius:13px;background:linear-gradient(120deg,#f0fbf5,#fff)}
+        .ad-profile-hero-copy{flex:1;min-width:0}
+        .ad-avatar-large{width:58px;height:58px;font-size:19px}
+        .ad-profile-hero h2{margin:6px 0;font-size:20px}
+        .ad-profile-hero p{margin:0;color:var(--muted);font-size:11px}
+        .ad-profile-hero-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+        .ad-profile-section{padding:21px 0;border-bottom:1px solid var(--border)}
+        .ad-profile-section:last-child{border-bottom:0}
+        .ad-profile-section h3{font-size:13px;margin:0 0 16px}
+        .ad-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+        .ad-profile-field{min-width:0}
+        .ad-profile-field>span{display:block;color:#82918d;font-size:10px;font-weight:750;margin-bottom:6px}
+        .ad-profile-field p,.ad-profile-field a{display:block;margin:0;color:#243a34;font-size:12px;line-height:1.7;overflow-wrap:anywhere;white-space:pre-wrap}
+        .ad-profile-field a{color:#087f68;text-decoration:underline}
+        .ad-profile-edit-field{display:block;min-width:0}
+        .ad-profile-edit-label{display:block;color:#52645c;font-size:10px;font-weight:750;margin-bottom:7px}
+        .ad-profile-input{display:block;width:100%;min-width:0;min-height:42px;padding:10px 12px;border:1px solid #dce7e1;border-radius:9px;background:#fff;color:#243a34;font-size:12px;line-height:1.6}
+        .ad-profile-input:focus{border-color:#087f68;outline:none;box-shadow:0 0 0 3px #087f681c}
+        .ad-profile-textarea{min-height:105px;resize:vertical}
+        .ad-profile-edit-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;padding-top:22px;margin-top:12px;border-top:1px solid var(--border)}
+        .ad-muted{color:var(--muted);font-size:11px;line-height:1.7}
+        .ad-alert{padding:16px 18px;border-radius:11px;margin-bottom:19px;font-size:11px}
+        .ad-alert p{line-height:1.7}
+        .ad-alert-error{color:#9b3333;background:#fff2f1;border:1px solid #f4d2ce}
+        .ad-alert-success{color:#086847;background:#e9f9f0;border:1px solid #bdebd0}
+        .ad-empty,.ad-state{padding:32px 20px;text-align:center;color:var(--muted)}
+        .ad-empty.compact{padding:20px 10px}
+        .ad-empty h3{color:var(--ink);font-size:14px;margin:10px 0 7px}
+        .ad-empty p,.ad-state p{font-size:11px;line-height:1.7;max-width:450px;margin:0 auto 16px}
+        .ad-empty-icon{margin:0 auto;display:grid;place-items:center;width:44px;height:44px;border-radius:13px;background:#e8f7ef;color:#087f68;font-size:21px}
+        .ad-spinner{display:inline-block;width:24px;height:24px;border:3px solid #dcebe4;border-top-color:#087f68;border-radius:50%;animation:ad-spin .7s linear infinite}
+        .ad-inline-loading{padding:24px 10px;color:var(--muted);font-size:11px}
+        .ad-chart-loading{display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:280px}
+        .ad-chart-loading p{color:var(--muted);font-size:11px}
+        .ad-auth-required{max-width:540px;margin:10vh auto;padding:40px;text-align:center;font-family:system-ui,sans-serif}
+        .ad-auth-required h1{font-size:25px}
+        @keyframes ad-spin{to{transform:rotate(360deg)}}
+        @media(min-width:1500px){.ad-stats-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.ad-stats-grid-secondary{grid-template-columns:repeat(4,minmax(0,1fr))}}
+        @media(max-width:1200px){.ad-sidebar{width:215px;flex-basis:215px}.ad-content{padding:24px 20px 40px}.ad-topbar{padding:12px 20px}.ad-stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.ad-stats-grid-secondary{grid-template-columns:repeat(2,minmax(0,1fr))}.ad-pie-layout{grid-template-columns:1fr}.ad-pie-graphic svg{max-width:155px}.ad-pie-legend{gap:9px}}
+        @media(max-width:900px){.ad-chart-grid,.ad-two-column{grid-template-columns:minmax(0,1fr)}.ad-pie-layout{grid-template-columns:minmax(130px,.7fr) minmax(0,1fr)}}
+        @media(max-width:720px){
+          .ad-shell{display:block}.ad-sidebar{position:static;width:100%;height:auto;min-height:0;padding:12px}
+          .ad-brand{padding:5px 7px 15px}.ad-nav-label,.ad-sidebar-bottom{display:none}
+          .ad-nav{display:flex;overflow-x:auto;gap:5px;padding-bottom:4px}
+          .ad-nav-button{width:auto;min-width:max-content;padding:0 11px;min-height:38px}
+          .ad-nav-separator{display:none}.ad-topbar{min-height:62px;padding:12px;flex-wrap:wrap;gap:10px}
+          .ad-search{order:3;width:100%;max-width:none;margin:0}.ad-user-chip{margin-left:auto}
+          .ad-content{padding:20px 12px 35px}.ad-welcome{align-items:flex-start;flex-direction:column}
+          .ad-welcome-actions{width:100%}.ad-welcome-actions .ad-button{flex:1}
+          .ad-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ad-stat{padding:14px}.ad-stat-value{font-size:25px}
+          .ad-panel,.ad-editor-panel,.ad-chart-card{padding:16px}.ad-profile-grid{grid-template-columns:1fr}
+          .ad-profile-hero{align-items:flex-start;flex-wrap:wrap}.ad-profile-hero-actions{width:100%}
+          .ad-profile-hero-actions .ad-button{flex:1}.ad-profile-edit-actions .ad-button{flex:1}
+          .ad-panel-heading,.ad-page-heading{align-items:flex-start}
+          .ad-pie-layout{grid-template-columns:minmax(100px,.7fr) minmax(0,1fr);gap:7px}
+          .ad-pie-legend-row{grid-template-columns:minmax(0,1fr) 22px 30px;gap:5px}
+        }
+        @media(max-width:390px){.ad-stats-grid{grid-template-columns:1fr 1fr}.ad-stat-label{font-size:10px}.ad-stat-foot{font-size:9px}.ad-topbar-title{font-size:12px}.ad-user-name{max-width:110px;overflow-wrap:anywhere}.ad-chart-card{padding:13px}.ad-pie-layout{grid-template-columns:1fr}.ad-pie-graphic svg{max-width:140px}}
+      `}</style>
+
+      <aside className="ad-sidebar">
+        <div className="ad-brand">
+          <div className="ad-brand-mark">K</div>
+          <div>
+            <strong>Katiba News</strong>
+            <small>AUTHOR WORKSPACE</small>
+          </div>
+        </div>
+
+        <div className="ad-nav-label">WORKSPACE</div>
+        <nav className="ad-nav" aria-label="Author dashboard navigation">
+          {navItems.map((item, index) => (
+            <React.Fragment key={item.id}>
+              {index === 8 && <div className="ad-nav-separator" />}
+              <button
+                type="button"
+                className={`ad-nav-button ${tab === item.id ? 'active' : ''}`}
+                onClick={() => changeTab(item.id)}
+                aria-current={tab === item.id ? 'page' : undefined}
+                title={item.description}
+              >
+                <span className="ad-nav-icon" aria-hidden="true">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            </React.Fragment>
+          ))}
+          <button type="button" className="ad-nav-button ad-logout" onClick={logout}>
+            <span className="ad-nav-icon" aria-hidden="true">↪</span>
+            <span>Logout</span>
+          </button>
+        </nav>
+
+        <div className="ad-sidebar-bottom">
+          <div className="ad-sidebar-note">
+            <strong>Write with purpose.</strong>
+            <p>Clear reporting and reliable information help people understand the decisions that affect them.</p>
+          </div>
+        </div>
+      </aside>
+
+      <main className="ad-main">
+        <header className="ad-topbar">
+          <div>
+            <div className="ad-topbar-title">{currentNavItem?.label || 'Overview'}</div>
+            <span className="ad-topbar-subtitle">
+              Katiba News · {currentNavItem?.description || 'Author workspace'}
+            </span>
+          </div>
+
+          <label className="ad-search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search articles and blogs…"
+              aria-label="Search articles and blogs"
+            />
+          </label>
+
+          <div className="ad-user-chip">
+            <div className="ad-avatar">{initials || 'A'}</div>
+            <div>
+              <div className="ad-user-name">{authorName}</div>
+              <span className="ad-user-role">{session.role || 'Author'}</span>
+            </div>
+          </div>
+        </header>
+
+        <div className="ad-content" onClickCapture={handleDashboardBackCapture}>
+          {searchQuery.trim() ? (
+            <section className="ad-panel">
+              <div className="ad-page-heading">
+                <div>
+                  <span className="ad-eyebrow">SEARCH RESULTS</span>
+                  <h1>Search your content</h1>
+                  <p>Matching articles and blogs returned by your APIs.</p>
+                </div>
+                <button className="ad-button ad-button-light" onClick={() => setSearchQuery('')}>
+                  Clear search
+                </button>
+              </div>
+
+              {loading ? (
+                <div className="ad-state">
+                  <span className="ad-spinner" />
+                  <p>Searching your content…</p>
+                </div>
+              ) : (
+                <>
+                  <h3>Articles ({filteredArticles.length})</h3>
+                  {filteredArticles.length === 0 ? (
+                    <p className="ad-muted">No matching articles.</p>
+                  ) : (
+                    <div className="ad-blog-list">
+                      {filteredArticles.map((article) => (
+                        <article className="ad-blog-row" key={article.id}>
+                          <div className="ad-blog-icon">▤</div>
+                          <div className="ad-blog-main">
+                            <strong>{article.title || 'Untitled article'}</strong>
+                            <p>{getStatusLabel(article.status)} · {formatDate(getRecordDate(article))}</p>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+
+                  <h3 style={{ marginTop: 26 }}>Blogs ({filteredBlogs.length})</h3>
+                  {filteredBlogs.length === 0 ? (
+                    <p className="ad-muted">No matching blogs.</p>
+                  ) : (
+                    <div className="ad-blog-list">
+                      {filteredBlogs.map((blog) => (
+                        <article className="ad-blog-row" key={blog.id}>
+                          <div className="ad-blog-icon">✎</div>
+                          <div className="ad-blog-main">
+                            <strong>{blog.title || 'Untitled blog'}</strong>
+                            <p>{blog.author_username || 'Author'} · {formatDate(getRecordDate(blog))}</p>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          ) : (
+            renderContent()
+          )}
+        </div>
+      </main>
+    </div>
+  )
+}
+
+export { AuthorDashboard }
+export default AuthorDashboard
