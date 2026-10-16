@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
@@ -148,7 +149,6 @@ const profileFields: {
     label: 'Phone number',
     placeholder: '+254 7XX XXX XXX',
   },
-
   {
     step: 2,
     key: 'years_of_experience',
@@ -175,7 +175,6 @@ const profileFields: {
     placeholder: 'Describe previous newsroom or media work.',
     multiline: true,
   },
-
   {
     step: 3,
     key: 'portfolio_url',
@@ -197,7 +196,6 @@ const profileFields: {
     placeholder: 'Paste links to your articles.',
     multiline: true,
   },
-
   {
     step: 4,
     key: 'primary_expertise',
@@ -237,7 +235,6 @@ const profileFields: {
     label: 'Geographic coverage',
     placeholder: 'Marsabit, Kenya, East Africa',
   },
-
   {
     step: 5,
     key: 'writing_experience',
@@ -267,7 +264,6 @@ const profileFields: {
     placeholder: 'How do you verify sources and documents?',
     multiline: true,
   },
-
   {
     step: 6,
     key: 'topics_of_interest',
@@ -378,8 +374,7 @@ const guestArticles = [
   {
     author: 'Wanjiku Njoroge',
     initials: 'WN',
-    title:
-      'What public participation can teach us about better policy',
+    title: 'What public participation can teach us about better policy',
     description:
       'A perspective on listening to communities before decisions are made.',
     art: 'art-guest-one',
@@ -437,8 +432,7 @@ const shows = [
   },
   {
     title: 'In Depth',
-    description:
-      'Long-form conversations about policy and public life.',
+    description: 'Long-form conversations about policy and public life.',
     art: 'art-show-two',
   },
   {
@@ -448,8 +442,7 @@ const shows = [
   },
   {
     title: 'The Explainer',
-    description:
-      'Complex public questions, made easier to understand.',
+    description: 'Complex public questions, made easier to understand.',
     art: 'art-show-four',
   },
 ]
@@ -474,7 +467,7 @@ const latestStories = [
 ]
 
 /* -------------------------------------------------------------------------- */
-/* Session and routing helpers                                                 */
+/* Session and routing helpers                                                */
 /* -------------------------------------------------------------------------- */
 
 function readSession(): Session | null {
@@ -487,22 +480,27 @@ function readSession(): Session | null {
 
     if (
       typeof session.username === 'string' &&
-      session.username.length > 0 &&
+      session.username.trim().length > 0 &&
       session.role === 'Author' &&
       typeof session.access === 'string' &&
       session.access.length > 0
     ) {
       return session as Session
     }
-  } catch {
-    // Invalid session data should never be treated as authenticated.
+  } catch (error) {
+    console.error('Could not read saved session:', error)
   }
 
   return null
 }
 
 function pathToView(path: string): View {
-  switch (path.replace(/\/+$/, '') || '/') {
+  const normalizedPath = path.replace(/\/+$/, '') || '/'
+
+  switch (normalizedPath) {
+    case '/':
+      return 'home'
+
     case '/signup':
     case '/signin':
       return 'auth'
@@ -511,6 +509,15 @@ function pathToView(path: string): View {
       return 'onboarding'
 
     case '/author/dashboard':
+    case '/author/dashboard/article':
+    case '/author/dashboard/articles':
+    case '/author/dashboard/blogs':
+    case '/author/dashboard/news':
+    case '/author/dashboard/analytics':
+    case '/author/dashboard/media':
+    case '/author/dashboard/comments':
+    case '/author/dashboard/settings':
+    case '/author/dashboard/profile':
     case '/features/dashboard/AuthorDashboard':
     case '/features/dashboard/authorDashboard':
       return 'dashboard'
@@ -527,7 +534,10 @@ const viewToPath: Record<View, string> = {
   dashboard: '/author/dashboard',
 }
 
-function scrollRow(id: string, direction: 'left' | 'right') {
+function scrollRow(
+  id: string,
+  direction: 'left' | 'right',
+) {
   document.getElementById(id)?.scrollBy({
     left: direction === 'left' ? -320 : 320,
     behavior: 'smooth',
@@ -557,7 +567,7 @@ function CarouselControls({ target }: { target: string }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Main application                                                            */
+/* Main application                                                           */
 /* -------------------------------------------------------------------------- */
 
 function App() {
@@ -589,13 +599,6 @@ function App() {
     readSession,
   )
 
-  /**
-   * Replace the current route and view together.
-   *
-   * This application uses a small custom router rather than React Router.
-   * Therefore, updating window.history alone is not enough: setView must
-   * also be called to render the correct page.
-   */
   function navigate(nextView: View, path?: string) {
     const nextPath = path ?? viewToPath[nextView]
 
@@ -616,12 +619,6 @@ function App() {
     }
   }
 
-  /**
-   * Enter the dashboard after saving the authenticated session.
-   *
-   * Use replaceState so that pressing Back does not immediately return
-   * to the sign-in form after a successful login.
-   */
   function enterDashboard(session: Session) {
     sessionStorage.setItem(
       'katibaUserSession',
@@ -636,9 +633,6 @@ function App() {
     setView('dashboard')
   }
 
-  /**
-   * Open profile onboarding for accounts that explicitly need it.
-   */
   function enterOnboarding(session: Session) {
     sessionStorage.setItem(
       'katibaUserSession',
@@ -665,7 +659,10 @@ function App() {
       const path = window.location.pathname
       const nextView = pathToView(path)
 
-      if (nextView === 'dashboard' || nextView === 'onboarding') {
+      if (
+        nextView === 'dashboard' ||
+        nextView === 'onboarding'
+      ) {
         const session = readSession()
 
         if (!session) {
@@ -686,7 +683,13 @@ function App() {
       }
 
       setView(nextView)
-      setMode(path === '/signup' ? 'signup' : 'signin')
+
+      if (path === '/signup') {
+        setMode('signup')
+      } else if (path === '/signin') {
+        setMode('signin')
+      }
+
       setMessage('')
 
       if (nextView === 'onboarding') {
@@ -701,7 +704,7 @@ function App() {
     }
   }, [])
 
-  /* Protect the dashboard and onboarding routes. */
+  /* Protect dashboard and onboarding routes. */
   useEffect(() => {
     if (view !== 'dashboard' && view !== 'onboarding') {
       return
@@ -737,7 +740,7 @@ function App() {
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Sign up and sign in                                                       */
+  /* Sign up and sign in                                                      */
   /* ------------------------------------------------------------------------ */
 
   async function handleSubmit(
@@ -748,8 +751,6 @@ function App() {
     setBusy(true)
 
     try {
-      /* ------------------------------- SIGN UP ------------------------------ */
-
       if (mode === 'signup') {
         const response = await fetch('/api/users/register/', {
           method: 'POST',
@@ -777,7 +778,6 @@ function App() {
                 ? result.message
                 : JSON.stringify(result),
           )
-
           return
         }
 
@@ -793,8 +793,6 @@ function App() {
 
         return
       }
-
-      /* ------------------------------- SIGN IN ------------------------------ */
 
       const loginResponse = await fetch('/api/users/login/', {
         method: 'POST',
@@ -828,11 +826,8 @@ function App() {
               ? login.message
               : 'Login failed. Check your username and password.',
         )
-
         return
       }
-
-      /* ------------------------- FETCH ACCOUNT DETAILS ---------------------- */
 
       const meResponse = await fetch('/api/users/me/', {
         method: 'GET',
@@ -860,17 +855,9 @@ function App() {
               ? account.message
               : 'Could not load your account. Please try again.',
         )
-
         return
       }
 
-      /*
-       * Accept "Author", "author", and other case variations.
-       * Some APIs do not return a role property, so a missing role is
-       * not automatically treated as an authorization failure.
-       *
-       * Explicitly non-author accounts are still rejected.
-       */
       const normalizedRole =
         typeof account.role === 'string'
           ? account.role.trim().toLowerCase()
@@ -883,11 +870,8 @@ function App() {
         setMessage(
           'This account is not authorised to access the author dashboard.',
         )
-
         return
       }
-
-      /* --------------------------- CREATE SESSION --------------------------- */
 
       const session: Session = {
         username:
@@ -899,16 +883,6 @@ function App() {
         access: login.access,
       }
 
-      /*
-       * Important:
-       * Do not require profile_complete === true to open the dashboard.
-       *
-       * Some Django /api/users/me/ implementations omit this property.
-       * An omitted property should not automatically send a user away
-       * from the dashboard.
-       *
-       * Only an explicit false value opens profile onboarding.
-       */
       if (account.profile_complete === false) {
         enterOnboarding(session)
       } else {
@@ -926,7 +900,7 @@ function App() {
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Author profile submission                                                 */
+  /* Author profile submission                                                */
   /* ------------------------------------------------------------------------ */
 
   async function handleAuthorProfileSubmit(
@@ -941,10 +915,7 @@ function App() {
       sessionStorage.removeItem('katibaUserSession')
       setSignedInUser(null)
 
-      setMessage(
-        'Your session has expired. Please sign in again.',
-      )
-
+      setMessage('Your session has expired. Please sign in again.')
       navigate('auth', '/signin')
 
       return
@@ -956,24 +927,20 @@ function App() {
       )
 
       setOnboardingStep(6)
-
       return
     }
 
     setBusy(true)
 
     try {
-      const response = await fetch(
-        '/api/users/author/profile/',
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access}`,
-          },
-          body: JSON.stringify(profile),
+      const response = await fetch('/api/users/author/profile/', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access}`,
         },
-      )
+        body: JSON.stringify(profile),
+      })
 
       const result = (await response
         .json()
@@ -986,7 +953,6 @@ function App() {
         window.history.replaceState({}, '', '/signin')
         setView('auth')
         setMode('signin')
-
         setMessage(
           'Your session has expired or you are not authorised. Please sign in again.',
         )
@@ -1002,19 +968,10 @@ function App() {
               ? result.message
               : `Could not save your profile: ${JSON.stringify(result)}`,
         )
-
         return
       }
 
-      /*
-       * Keep the authenticated session and navigate to the dashboard
-       * after the backend confirms that the profile was saved.
-       */
-      window.history.replaceState(
-        {},
-        '',
-        '/author/dashboard',
-      )
+      window.history.replaceState({}, '', '/author/dashboard')
 
       setSignedInUser(session)
       setMessage('')
@@ -1031,7 +988,7 @@ function App() {
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Sign out                                                                  */
+  /* Sign out                                                                 */
   /* ------------------------------------------------------------------------ */
 
   function signOut() {
@@ -1050,7 +1007,7 @@ function App() {
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Author dashboard                                                          */
+  /* Author dashboard                                                         */
   /* ------------------------------------------------------------------------ */
 
   if (view === 'dashboard') {
@@ -1063,7 +1020,8 @@ function App() {
             <h1>Please sign in</h1>
 
             <p>
-              You must sign in to access your author dashboard.
+              Your session may have expired. Sign in to access
+              your author dashboard.
             </p>
 
             <button
@@ -1082,7 +1040,7 @@ function App() {
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Sign-in and sign-up page                                                   */
+  /* Sign-in and sign-up page                                                 */
   /* ------------------------------------------------------------------------ */
 
   if (view === 'auth') {
@@ -1162,10 +1120,7 @@ function App() {
               </div>
             </div>
 
-            <form
-              className="account-form"
-              onSubmit={handleSubmit}
-            >
+            <form className="account-form" onSubmit={handleSubmit}>
               <div className="account-form-heading">
                 <span>KATIBA NEWS</span>
 
@@ -1202,30 +1157,22 @@ function App() {
 
               {isSignup && (
                 <>
-                  <label htmlFor="firstName">
-                    First name
-                  </label>
+                  <label htmlFor="firstName">First name</label>
 
                   <input
                     id="firstName"
                     value={firstName}
-                    onChange={(event) =>
-                      setFirstName(event.target.value)
-                    }
+                    onChange={(event) => setFirstName(event.target.value)}
                     autoComplete="given-name"
                     required
                   />
 
-                  <label htmlFor="lastName">
-                    Last name
-                  </label>
+                  <label htmlFor="lastName">Last name</label>
 
                   <input
                     id="lastName"
                     value={lastName}
-                    onChange={(event) =>
-                      setLastName(event.target.value)
-                    }
+                    onChange={(event) => setLastName(event.target.value)}
                     autoComplete="family-name"
                     required
                   />
@@ -1236,9 +1183,7 @@ function App() {
                     id="email"
                     type="email"
                     value={email}
-                    onChange={(event) =>
-                      setEmail(event.target.value)
-                    }
+                    onChange={(event) => setEmail(event.target.value)}
                     autoComplete="email"
                     required
                   />
@@ -1250,9 +1195,7 @@ function App() {
               <input
                 id="username"
                 value={username}
-                onChange={(event) =>
-                  setUsername(event.target.value)
-                }
+                onChange={(event) => setUsername(event.target.value)}
                 autoComplete="username"
                 required
               />
@@ -1263,12 +1206,8 @@ function App() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(event) =>
-                  setPassword(event.target.value)
-                }
-                autoComplete={
-                  isSignup ? 'new-password' : 'current-password'
-                }
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete={isSignup ? 'new-password' : 'current-password'}
                 required
               />
 
@@ -1285,10 +1224,7 @@ function App() {
               </button>
 
               {message && (
-                <p
-                  className="account-message"
-                  role="status"
-                >
+                <p className="account-message" role="status">
                   {message}
                 </p>
               )}
@@ -1310,7 +1246,7 @@ function App() {
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Six-step author onboarding                                                */
+  /* Six-step author onboarding                                               */
   /* ------------------------------------------------------------------------ */
 
   if (view === 'onboarding') {
@@ -1343,18 +1279,12 @@ function App() {
       })
 
       if (missingField) {
-        setMessage(
-          `Please complete: ${missingField.label}.`,
-        )
-
+        setMessage(`Please complete: ${missingField.label}.`)
         return
       }
 
       setMessage('')
-
-      setOnboardingStep((step) =>
-        Math.min(step + 1, 6),
-      )
+      setOnboardingStep((step) => Math.min(step + 1, 6))
     }
 
     return (
@@ -1408,9 +1338,7 @@ function App() {
 
           <div className="profile-layout">
             <aside className="profile-sidebar">
-              <span className="stage-kicker">
-                YOUR PROFILE
-              </span>
+              <span className="stage-kicker">YOUR PROFILE</span>
 
               <h1>
                 Tell us about
@@ -1429,9 +1357,7 @@ function App() {
                     key={step.name}
                     type="button"
                     className={
-                      onboardingStep === index + 1
-                        ? 'active'
-                        : ''
+                      onboardingStep === index + 1 ? 'active' : ''
                     }
                     onClick={() => {
                       setOnboardingStep(index + 1)
@@ -1450,30 +1376,20 @@ function App() {
               onSubmit={handleAuthorProfileSubmit}
             >
               <div className="profile-form-heading">
-                <span>
-                  PROFILE {onboardingStep} / 6
-                </span>
-
-                <h2>
-                  {profileSteps[onboardingStep - 1].title}
-                </h2>
+                <span>PROFILE {onboardingStep} / 6</span>
+                <h2>{profileSteps[onboardingStep - 1].title}</h2>
               </div>
 
               {currentFields.map((field) => (
                 <div key={field.key}>
-                  <label htmlFor={field.key}>
-                    {field.label}
-                  </label>
+                  <label htmlFor={field.key}>{field.label}</label>
 
                   {field.multiline ? (
                     <textarea
                       id={field.key}
                       value={String(profile[field.key])}
                       onChange={(event) =>
-                        updateProfile(
-                          field.key,
-                          event.target.value,
-                        )
+                        updateProfile(field.key, event.target.value)
                       }
                       placeholder={field.placeholder}
                       rows={5}
@@ -1485,10 +1401,7 @@ function App() {
                       type={field.type ?? 'text'}
                       value={String(profile[field.key])}
                       onChange={(event) =>
-                        updateProfile(
-                          field.key,
-                          event.target.value,
-                        )
+                        updateProfile(field.key, event.target.value)
                       }
                       placeholder={field.placeholder}
                       required={field.required}
@@ -1501,9 +1414,7 @@ function App() {
                 <label className="checkbox-row">
                   <input
                     type="checkbox"
-                    checked={
-                      profile.editorial_standards_agreement
-                    }
+                    checked={profile.editorial_standards_agreement}
                     onChange={(event) =>
                       updateProfile(
                         'editorial_standards_agreement',
@@ -1527,10 +1438,7 @@ function App() {
                     className="profile-back"
                     onClick={() => {
                       setMessage('')
-
-                      setOnboardingStep((step) =>
-                        Math.max(step - 1, 1),
-                      )
+                      setOnboardingStep((step) => Math.max(step - 1, 1))
                     }}
                   >
                     ← Back
@@ -1557,10 +1465,7 @@ function App() {
               </div>
 
               {message && (
-                <p
-                  className="account-message"
-                  role="status"
-                >
+                <p className="account-message" role="status">
                   {message}
                 </p>
               )}
@@ -1582,13 +1487,11 @@ function App() {
   }
 
   /* ------------------------------------------------------------------------ */
-  /* Landing page                                                              */
+  /* Landing page                                                             */
   /* ------------------------------------------------------------------------ */
 
   const filteredLatest = latestStories.filter((story) =>
-    story.title
-      .toLowerCase()
-      .includes(search.toLowerCase()),
+    story.title.toLowerCase().includes(search.toLowerCase()),
   )
 
   return (
@@ -1618,14 +1521,11 @@ function App() {
 
           <label className="search-box">
             <span aria-hidden="true">⌕</span>
-
             <input
               aria-label="Search news"
               placeholder="Search news"
               value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
+              onChange={(event) => setSearch(event.target.value)}
             />
           </label>
 
@@ -1640,18 +1540,12 @@ function App() {
               className="theme-toggle"
               type="button"
               aria-label={
-                darkMode
-                  ? 'Switch to light mode'
-                  : 'Switch to dark mode'
+                darkMode ? 'Switch to light mode' : 'Switch to dark mode'
               }
               title={
-                darkMode
-                  ? 'Switch to light mode'
-                  : 'Switch to dark mode'
+                darkMode ? 'Switch to light mode' : 'Switch to dark mode'
               }
-              onClick={() =>
-                setDarkMode((current) => !current)
-              }
+              onClick={() => setDarkMode((current) => !current)}
             >
               {darkMode ? '☀' : '☾'}
             </button>
@@ -1661,9 +1555,7 @@ function App() {
                 <button
                   className="header-signin"
                   type="button"
-                  onClick={() =>
-                    navigate('dashboard', '/author/dashboard')
-                  }
+                  onClick={() => navigate('dashboard', '/author/dashboard')}
                 >
                   Author dashboard
                 </button>
@@ -1688,18 +1580,13 @@ function App() {
           </div>
         </div>
 
-        <nav
-          className="news-nav"
-          aria-label="Main navigation"
-        >
+        <nav className="news-nav" aria-label="Main navigation">
           <a href="#top">Home</a>
           <a href="#your-news">Your News</a>
           <a href="#guest-analysis">Guest Analysis</a>
           <a href="#events">Events</a>
           <a href="#shows">Shows</a>
-          <a href="#business-intelligence">
-            Business Intelligence
-          </a>
+          <a href="#business-intelligence">Business Intelligence</a>
 
           {!signedInUser && (
             <button
@@ -1713,35 +1600,18 @@ function App() {
       </header>
 
       <div className="page-content">
-        {/* Lead story and latest headlines */}
-
-        <section
-          className="lead-latest"
-          id="latest"
-        >
+        <section className="lead-latest" id="latest">
           <article className="lead-story">
-            <div
-              className="lead-art"
-              aria-hidden="true"
-            />
+            <div className="lead-art" aria-hidden="true" />
 
             <div className="lead-copy">
-              <span className="story-category">
-                GOVERNANCE
-              </span>
-
-              <h1>
-                Understanding the decisions that shape Kenya
-              </h1>
-
+              <span className="story-category">GOVERNANCE</span>
+              <h1>Understanding the decisions that shape Kenya</h1>
               <p>
-                The latest reporting and clear explanations on
-                public life, policy, and the Constitution.
+                The latest reporting and clear explanations on public
+                life, policy, and the Constitution.
               </p>
-
-              <a href="#your-news">
-                Explore the story →
-              </a>
+              <a href="#your-news">Explore the story →</a>
             </div>
           </article>
 
@@ -1765,20 +1635,12 @@ function App() {
           </aside>
         </section>
 
-        {/* Featured stories */}
-
-        <section
-          className="content-section"
-          id="featured"
-        >
+        <section className="content-section" id="featured">
           <div className="section-heading">
             <div>
-              <span className="section-kicker">
-                KATIBA NEWS
-              </span>
+              <span className="section-kicker">KATIBA NEWS</span>
               <h2>Featured</h2>
             </div>
-
             <CarouselControls target="featured-row" />
           </div>
 
@@ -1787,41 +1649,27 @@ function App() {
             id="featured-row"
           >
             <article className="featured-promo">
-              <span className="story-category">
-                KATIBA EXPLAINER
-              </span>
-
+              <span className="story-category">KATIBA EXPLAINER</span>
               <h3>
-                Understand the decisions that shape your
-                community
+                Understand the decisions that shape your community
               </h3>
-
               <p>
-                Clear guides to the Constitution, public
-                services, and your rights.
+                Clear guides to the Constitution, public services,
+                and your rights.
               </p>
-
               <a href="#your-news">
                 Explore the news <span>→</span>
               </a>
             </article>
 
             {featuredStories.map((story) => (
-              <article
-                className="feature-card"
-                key={story.title}
-              >
-                <div
-                  className={`image-panel ${story.art}`}
-                >
+              <article className="feature-card" key={story.title}>
+                <div className={`image-panel ${story.art}`}>
                   <span>{story.category}</span>
                 </div>
 
                 <div className="feature-card-copy">
-                  <span className="story-category">
-                    {story.category}
-                  </span>
-
+                  <span className="story-category">{story.category}</span>
                   <h3>{story.title}</h3>
                   <p>{story.description}</p>
                 </div>
@@ -1830,28 +1678,15 @@ function App() {
           </div>
         </section>
 
-        {/* Newsletters */}
-
-        <section
-          className="content-section"
-          id="newsletters"
-        >
+        <section className="content-section" id="newsletters">
           <div className="section-heading">
             <div>
-              <span className="section-kicker">
-                FROM OUR DESK
-              </span>
-
+              <span className="section-kicker">FROM OUR DESK</span>
               <h2>Newsletters</h2>
-
-              <a
-                className="view-all"
-                href="#footer"
-              >
+              <a className="view-all" href="#footer">
                 View all newsletters →
               </a>
             </div>
-
             <CarouselControls target="newsletter-row" />
           </div>
 
@@ -1860,43 +1695,24 @@ function App() {
             id="newsletter-row"
           >
             {newsletters.map((item) => (
-              <article
-                className="newsletter-card"
-                key={item.title}
-              >
-                <div
-                  className={`newsletter-cover ${item.art}`}
-                >
-                  <span className="cover-date">
-                    {item.date}
-                  </span>
-
+              <article className="newsletter-card" key={item.title}>
+                <div className={`newsletter-cover ${item.art}`}>
+                  <span className="cover-date">{item.date}</span>
                   <strong>{item.title}</strong>
-
                   <span className="cover-mark">K</span>
                 </div>
-
                 <h3>{item.title}</h3>
               </article>
             ))}
           </div>
         </section>
 
-        {/* Your News */}
-
-        <section
-          className="content-section"
-          id="your-news"
-        >
+        <section className="content-section" id="your-news">
           <div className="section-heading">
             <div>
-              <span className="section-kicker">
-                FOLLOW THE ISSUES
-              </span>
-
+              <span className="section-kicker">FOLLOW THE ISSUES</span>
               <h2>Your News</h2>
             </div>
-
             <CarouselControls target="your-news-row" />
           </div>
 
@@ -1905,34 +1721,23 @@ function App() {
             id="your-news-row"
           >
             {newsCategories.map((category, index) => (
-              <article
-                className="category-column"
-                key={category.name}
-              >
+              <article className="category-column" key={category.name}>
                 <h3>{category.name}</h3>
 
-                {category.stories.map(
-                  (title, storyIndex) => (
-                    <a
-                      className="category-story"
-                      href="#latest"
-                      key={title}
-                    >
-                      <div
-                        className={`mini-art mini-art-${index}-${storyIndex}`}
-                      />
-
-                      <strong>{title}</strong>
-                    </a>
-                  ),
-                )}
+                {category.stories.map((title, storyIndex) => (
+                  <a className="category-story" href="#latest" key={title}>
+                    <div
+                      className={`mini-art mini-art-${index}-${storyIndex}`}
+                    />
+                    <strong>{title}</strong>
+                  </a>
+                ))}
               </article>
             ))}
           </div>
 
           <div className="latest-block">
             <h3>Latest updates</h3>
-
             <div className="latest-list">
               {filteredLatest.map((story) => (
                 <article key={story.title}>
@@ -1948,21 +1753,12 @@ function App() {
           </div>
         </section>
 
-        {/* Guest Analysis */}
-
-        <section
-          className="content-section"
-          id="guest-analysis"
-        >
+        <section className="content-section" id="guest-analysis">
           <div className="section-heading">
             <div>
-              <span className="section-kicker">
-                PERSPECTIVES
-              </span>
-
+              <span className="section-kicker">PERSPECTIVES</span>
               <h2>Guest Analysis</h2>
             </div>
-
             <CarouselControls target="analysis-row" />
           </div>
 
@@ -1971,22 +1767,15 @@ function App() {
             id="analysis-row"
           >
             {guestArticles.map((article) => (
-              <article
-                className="analysis-card"
-                key={article.title}
-              >
-                <div
-                  className={`analysis-art ${article.art}`}
-                />
+              <article className="analysis-card" key={article.title}>
+                <div className={`analysis-art ${article.art}`} />
 
                 <div className="analysis-copy">
                   <div className="author-line">
                     <span className="author-avatar">
                       {article.initials}
                     </span>
-
                     <span>{article.author}</span>
-
                     <time>Guest contributor</time>
                   </div>
 
@@ -1998,31 +1787,21 @@ function App() {
           </div>
         </section>
 
-        {/* Events */}
-
-        <section
-          className="content-section events-section"
-          id="events"
-        >
+        <section className="content-section events-section" id="events">
           <div className="section-heading">
             <div>
-              <span className="section-kicker">
-                JOIN THE CONVERSATION
-              </span>
-
+              <span className="section-kicker">JOIN THE CONVERSATION</span>
               <h2>Events</h2>
             </div>
-
             <CarouselControls target="events-row" />
           </div>
 
           <div className="events-layout">
             <div className="events-intro">
               <h3>Upcoming events</h3>
-
               <p>
-                Join public conversations, practical workshops,
-                and community forums.
+                Join public conversations, practical workshops, and
+                community forums.
               </p>
             </div>
 
@@ -2031,13 +1810,8 @@ function App() {
               id="events-row"
             >
               {events.map((event) => (
-                <article
-                  className="event-card"
-                  key={event.title}
-                >
-                  <div
-                    className={`event-art ${event.art}`}
-                  />
+                <article className="event-card" key={event.title}>
+                  <div className={`event-art ${event.art}`} />
 
                   <div className="event-copy">
                     <h3>{event.title}</h3>
@@ -2054,40 +1828,22 @@ function App() {
           </div>
         </section>
 
-        {/* Shows */}
-
-        <section
-          className="content-section"
-          id="shows"
-        >
+        <section className="content-section" id="shows">
           <div className="section-heading">
             <div>
-              <span className="section-kicker">
-                WATCH &amp; LISTEN
-              </span>
-
+              <span className="section-kicker">WATCH &amp; LISTEN</span>
               <h2>Shows</h2>
             </div>
-
             <CarouselControls target="shows-row" />
           </div>
 
-          <div
-            className="shows-row horizontal-row"
-            id="shows-row"
-          >
+          <div className="shows-row horizontal-row" id="shows-row">
             {shows.map((show) => (
-              <article
-                className="show-card"
-                key={show.title}
-              >
-                <div
-                  className={`show-art ${show.art}`}
-                >
+              <article className="show-card" key={show.title}>
+                <div className={`show-art ${show.art}`}>
                   <span>KATIBA NEWS</span>
                   <strong>{show.title}</strong>
                 </div>
-
                 <h3>{show.title}</h3>
                 <p>{show.description}</p>
               </article>
@@ -2095,25 +1851,17 @@ function App() {
           </div>
         </section>
 
-        {/* Business Intelligence */}
-
         <section
           className="business-section"
           id="business-intelligence"
         >
           <div className="business-heading">
             <div>
-              <span className="section-kicker">
-                DATA FOR DECISIONS
-              </span>
-
-              <h2>
-                Katiba News Business Intelligence
-              </h2>
-
+              <span className="section-kicker">DATA FOR DECISIONS</span>
+              <h2>Katiba News Business Intelligence</h2>
               <p>
-                Useful context and tools for understanding
-                Kenya’s economy and public sector.
+                Useful context and tools for understanding Kenya’s
+                economy and public sector.
               </p>
             </div>
 
@@ -2122,16 +1870,11 @@ function App() {
               type="button"
               onClick={() =>
                 signedInUser
-                  ? navigate(
-                      'dashboard',
-                      '/author/dashboard',
-                    )
+                  ? navigate('dashboard', '/author/dashboard')
                   : openAuth('signup')
               }
             >
-              {signedInUser
-                ? 'Author dashboard'
-                : 'Sign up'}{' '}
+              {signedInUser ? 'Author dashboard' : 'Sign up'}{' '}
               <span>→</span>
             </button>
           </div>
@@ -2140,48 +1883,39 @@ function App() {
             <div className="business-features">
               <article>
                 <h3>Economic indicators</h3>
-                <p>
-                  Follow key figures and understand what they
-                  mean.
-                </p>
+                <p>Follow key figures and understand what they mean.</p>
               </article>
 
               <article>
                 <h3>Local and global insights</h3>
                 <p>
-                  Explore analysis connecting Kenyan markets
-                  with wider trends.
+                  Explore analysis connecting Kenyan markets with
+                  wider trends.
                 </p>
               </article>
 
               <article>
                 <h3>Public finance</h3>
                 <p>
-                  Get clearer context on budgets, revenue,
-                  and public spending.
+                  Get clearer context on budgets, revenue, and public
+                  spending.
                 </p>
               </article>
 
               <article>
                 <h3>Interactive data</h3>
                 <p>
-                  Compare information through simple charts
-                  and visual guides.
+                  Compare information through simple charts and visual
+                  guides.
                 </p>
               </article>
             </div>
 
             <div className="business-preview">
               <span>BUSINESS INTELLIGENCE</span>
+              <strong>Data. Context. Better decisions.</strong>
 
-              <strong>
-                Data. Context. Better decisions.
-              </strong>
-
-              <div
-                className="preview-bars"
-                aria-hidden="true"
-              >
+              <div className="preview-bars" aria-hidden="true">
                 <i />
                 <i />
                 <i />
@@ -2195,22 +1929,13 @@ function App() {
         </section>
       </div>
 
-      {/* Footer */}
-
-      <footer
-        className="site-footer"
-        id="footer"
-      >
+      <footer className="site-footer" id="footer">
         <div className="footer-brand">
           <strong>Katiba News</strong>
-
-          <small>
-            THE PEOPLE. THE LAW. THE FUTURE.
-          </small>
-
+          <small>THE PEOPLE. THE LAW. THE FUTURE.</small>
           <p>
-            Independent reporting and useful context for
-            public life in Kenya.
+            Independent reporting and useful context for public life
+            in Kenya.
           </p>
         </div>
 
@@ -2224,19 +1949,14 @@ function App() {
 
         <div>
           <h3>Contact</h3>
-
           <a href="mailto:hello@katibanews.example">
             Media and partnerships
           </a>
-
-          <a href="#footer">
-            Contact the newsroom →
-          </a>
+          <a href="#footer">Contact the newsroom →</a>
         </div>
 
         <div>
           <h3>About Katiba News</h3>
-
           <p>
             News and explanations focused on the Constitution,
             governance, rights, and public services.
@@ -2244,14 +1964,11 @@ function App() {
         </div>
       </footer>
 
-      {/* Cookie notice */}
-
       {showCookieNotice && (
         <div className="cookie-notice">
           <p>
-            We use essential site storage to keep this
-            demonstration working. Read our{' '}
-            <a href="#footer">privacy information</a>.
+            We use essential site storage to keep this demonstration
+            working. Read our <a href="#footer">privacy information</a>.
           </p>
 
           <button
