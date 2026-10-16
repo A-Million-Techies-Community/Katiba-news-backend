@@ -3,35 +3,35 @@ from django.conf import settings
 from django.utils.text import slugify
 
 class Article(models.Model):
-    # Using Django TextChoices is the cleanest, modern way to handle choice fields
     class Status(models.TextChoices):
         DRAFT = 'draft', 'Draft'
+        UNDER_REVIEW = 'under_review', 'Under Review'
         PUBLISHED = 'published', 'Published'
 
     title = models.CharField(max_length=255)
-    # db_index=True makes looking up articles via web links lightning fast
     slug = models.SlugField(max_length=255, unique=True, blank=True, db_index=True)
-    content = models.TextField()  # Holds raw markdown data from ArticleEditor.tsx
+    content = models.TextField()
+    status = models.CharField(max_length=15, choices=Status.choices, default=Status.DRAFT)
     
-    status = models.CharField(
-        max_length=10, 
-        choices=Status.choices, 
-        default=Status.DRAFT
-    )
-    
-    # Maps directly to your colleague's user profile identity schema
-    author = models.ForeignKey(
-        settings.AUTH_USER_MODEL, 
-        on_delete=models.CASCADE, 
-        related_name='articles'
-    )
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='articles')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        # Automatically generate clean URL links from the title if missing
+        """
+        Flowchart Lifecycle Hook: Automatically converts the text header to a clean,
+        UNIQUE web URL slug link before saving to the database.
+        """
         if not self.slug:
-            self.slug = slugify(self.title)
+            base_slug = slugify(self.title) or 'untitled'
+            slug = base_slug
+            counter = 1
+            # 📍 Auto-resolves IntegrityError by checking collisions and appending integers
+            while Article.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+            
         super().save(*args, **kwargs)
 
     def __str__(self):
