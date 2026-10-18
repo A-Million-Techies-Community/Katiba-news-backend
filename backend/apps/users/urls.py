@@ -10,7 +10,12 @@ from .views import (
 )
 
 
+from .settings_views import AuthorPasswordChangeView, AuthorSettingsView
+
+
 urlpatterns = [
+    path("author/settings/", AuthorSettingsView.as_view(), name="author-settings"),
+    path("author/settings/password/", AuthorPasswordChangeView.as_view(), name="author-password-change"),
     path(
         "register/",
         RegisterView.as_view(),

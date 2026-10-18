@@ -216,7 +216,14 @@ export default function NewsDashboard() {
 
   const basePath = `/news/dashboard/${mode}`
   function navigate(page: string, saved = false) {
-    if (!saved && (dirty || (!selected && composing && (title || content))) && !window.confirm('Leave this page and discard unsaved changes?')) return
+    let warnBeforeLeaving = true
+    try {
+      const preferences = JSON.parse(localStorage.getItem('katibaAuthorPreferences') || '{}')
+      warnBeforeLeaving = preferences.warn_unsaved_edits !== false
+    } catch {
+      // Keep the safe default of warning before discarding edits.
+    }
+    if (warnBeforeLeaving && !saved && (dirty || (!selected && composing && (title || content))) && !window.confirm('Leave this page and discard unsaved changes?')) return
     const path = page === 'overview' ? basePath : `${basePath}/${page}`
     window.history.pushState(null, '', path)
     setRoute(path)

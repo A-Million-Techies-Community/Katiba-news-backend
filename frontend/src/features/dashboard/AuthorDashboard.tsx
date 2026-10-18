@@ -1,3 +1,4 @@
+import AuthorSettings from './AuthorSettings'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArticleEditor } from '../articles/components/ArticleEditor'
@@ -1028,6 +1029,11 @@ function AuthorDashboard() {
   )
 
   const changeTab = useCallback((nextTab: Tab) => {
+    if (nextTab === 'news') {
+      window.location.assign('/news/dashboard')
+      return
+    }
+
     setTab(nextTab)
     setSearchQuery('')
     setError('')
@@ -2196,6 +2202,8 @@ function AuthorDashboard() {
         icon: '⚙',
       },
     }
+
+    if (tab === 'settings') return <AuthorSettings />
 
     const info = pageInfo[tab]
     if (!info) return null
