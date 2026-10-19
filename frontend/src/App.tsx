@@ -629,8 +629,7 @@ function App() {
     setPassword('')
     setMessage('')
 
-    window.history.replaceState({}, '', '/author/dashboard')
-    setView('dashboard')
+    window.location.assign('/news/dashboard')
   }
 
   function enterOnboarding(session: Session) {
@@ -971,11 +970,9 @@ function App() {
         return
       }
 
-      window.history.replaceState({}, '', '/author/dashboard')
-
       setSignedInUser(session)
       setMessage('')
-      setView('dashboard')
+      window.location.assign('/news/dashboard')
     } catch (error) {
       console.error('Profile submission error:', error)
 
