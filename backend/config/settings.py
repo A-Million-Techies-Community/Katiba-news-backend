@@ -1,11 +1,15 @@
 """Settings for the Katiba News backend."""
 from datetime import timedelta
 from pathlib import Path
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = 'django-insecure-#r_n6iiy=s(-76d##ar*)^!nz+q50$it-&mg*ak51f(8h^xdl#'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'local-development-only-change-before-hosting-892374982374982374')
 DEBUG = True
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
+PUBLIC_SITE_URL = os.environ.get('PUBLIC_SITE_URL', 'http://127.0.0.1:5173').rstrip('/')
+NEWS_UPLOAD_ROOT = BASE_DIR / 'news_uploads'
+
 
 INSTALLED_APPS = [
     'django.contrib.admin', 'django.contrib.auth', 'django.contrib.contenttypes',
@@ -34,7 +38,7 @@ TEMPLATES = [{'BACKEND': 'django.template.backends.django.DjangoTemplates', 'DIR
               ]}}]
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
-DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
+DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': os.environ.get('SQLITE_PATH', BASE_DIR / 'db.sqlite3')}}
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -50,7 +54,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': ('apps.users.authentication.VersionedJWTAuthentication',),
-    'DEFAULT_THROTTLE_RATES': {'password_recovery': '10/hour'},
+    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',),
+    'DEFAULT_THROTTLE_CLASSES': ('rest_framework.throttling.AnonRateThrottle',),
+    'DEFAULT_THROTTLE_RATES': {'staff_application': '5/hour', 'password_recovery': '10/hour', 'anon': '120/hour'},
 }
 SIMPLE_JWT = {
     'TOKEN_OBTAIN_SERIALIZER': 'apps.users.authentication.LoginSerializer',

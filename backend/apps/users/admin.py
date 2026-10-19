@@ -6,18 +6,28 @@ from .models import User
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    readonly_fields = ('role',)
+    readonly_fields = ('newsroom_access',)
     fieldsets = UserAdmin.fieldsets + (
-        ("Katiba News", {"fields": ("role",)}),
+        ("Katiba News", {"fields": ("newsroom_access",)}),
     )
 
     add_fieldsets = UserAdmin.add_fieldsets + (
         ("Katiba News", {"fields": ("email",)}),
     )
 
-    list_display = ("username", "email", "role", "is_staff", "is_active")
-    list_filter = ("role", "is_staff", "is_active")
+    list_display = ("username", "email", "newsroom_access", "is_staff", "is_active")
+    list_filter = ("groups", "is_staff", "is_active")
     search_fields = ("username", "email")
+
+    @admin.display(description='Newsroom access')
+    def newsroom_access(self, obj):
+        from .serializers import UserSerializer
+        return UserSerializer(obj).data['role']
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        from django.db.models import F
+        User.objects.filter(pk=form.instance.pk).update(auth_version=F('auth_version') + 1)
 
     # User changes include permissions and staff status. Restrict account
     # administration to superusers to prevent delegated editors promoting peers.

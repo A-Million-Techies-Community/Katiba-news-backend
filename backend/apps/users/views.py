@@ -1,4 +1,3 @@
-from django.core.exceptions import ValidationError as DjangoValidationError
 
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -8,41 +7,8 @@ from .models import AuthorProfile
 from .permissions import IsAuthor
 from .serializers import (
     AuthorProfileSerializer,
-    UserRegistrationSerializer,
     UserSerializer,
 )
-
-
-class RegisterView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        serializer = UserRegistrationSerializer(data=request.data)
-
-        if not serializer.is_valid():
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            user = serializer.save()
-        except DjangoValidationError as error:
-            return Response(
-                {"password": error.messages},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        return Response(
-            {
-                "message": (
-                    "Author account created. "
-                    "Sign in to complete your profile."
-                ),
-                "user": UserSerializer(user).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
 
 
 class MeView(APIView):

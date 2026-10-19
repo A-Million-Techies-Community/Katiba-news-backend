@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.contrib.auth.models import Group
 from rest_framework import status
 from rest_framework.test import APITestCase
 from apps.articles.models import Article
@@ -13,6 +14,7 @@ class KatibaNewsCoreTests(APITestCase):
     # Sets up an authenticated user profile session before each test runs
     def setUp(self):
         self.user = User.objects.create_user(username="testuser", password="password123")
+        self.user.groups.add(Group.objects.get(name='Author'))
         self.client.force_authenticate(user=self.user)
 
     # Validates that post routing parameters write objects to the articles database safely
@@ -22,7 +24,7 @@ class KatibaNewsCoreTests(APITestCase):
         payload = {
             "title": "Test Title", 
             "content": "Test Body Content", 
-            "status": "published",
+            "status": "draft",
             "author": self.user.id
         }
         response = self.client.post(url, payload, format="json")

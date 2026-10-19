@@ -1,29 +1,39 @@
 from rest_framework import serializers
 
 from .models import AuthorProfile, User
-
-
-class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(
-        write_only=True,
-        min_length=8,
-    )
-
-    class Meta:
-        model = User
-        fields = (
-            "username",
-            "email",
-            "password",
-            "first_name",
-            "last_name",
-        )
-
-    def create(self, validated_data):
-        return User.create(validated_data)
+from .access import eligible_author, editorial_access
 
 
 class UserSerializer(serializers.ModelSerializer):
+    workspace_url = serializers.SerializerMethodField()
+    role = serializers.SerializerMethodField()
+    is_author = serializers.SerializerMethodField()
+    can_review = serializers.SerializerMethodField()
+    is_administrator = serializers.SerializerMethodField()
+
+    def get_workspace_url(self, user):
+        if not user.is_active:
+            return None
+        if user.is_superuser:
+            return '/workspace/admin'
+        if eligible_author(user):
+            return '/author/dashboard' if self.get_profile_complete(user) else '/author/complete-profile'
+        if editorial_access(user):
+            return '/news/dashboard/editor'
+        return None
+
+    def get_role(self, user):
+        return 'Administrator' if user.is_superuser else 'Author' if eligible_author(user) else 'Editor' if editorial_access(user) else None
+
+    def get_is_author(self, user):
+        return eligible_author(user)
+
+    def get_can_review(self, user):
+        return editorial_access(user)
+
+    def get_is_administrator(self, user):
+        return user.is_active and user.is_superuser
+
     profile_complete = serializers.SerializerMethodField()
 
     class Meta:
@@ -35,7 +45,7 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "role",
-            "profile_complete",
+            "profile_complete", "is_author", "can_review", "is_administrator", "is_active", "workspace_url",
         )
 
     def get_profile_complete(self, user):

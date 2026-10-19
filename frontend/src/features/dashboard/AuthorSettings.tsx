@@ -1,3 +1,4 @@
+import { sessionFetch } from '../../auth/session'
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './AuthorSettings.css'
@@ -53,7 +54,7 @@ async function settingsRequest(
   const token = savedAccessToken()
   if (!token) throw new Error('Your session has expired. Please sign in again.')
 
-  const response = await fetch(path, {
+  const response = await sessionFetch(path, {
     method,
     credentials: 'omit',
     headers: {
@@ -75,7 +76,9 @@ async function settingsRequest(
 }
 
 function applyAppearance(preferences: Preferences, cache = true) {
-  // Appearance choices are scoped to Settings, not the whole dashboard.
+  document.documentElement.dataset.workspaceDensity = preferences.density
+  document.documentElement.dataset.workspaceMotion = preferences.reduce_motion ? 'reduce' : 'normal'
+  window.dispatchEvent(new CustomEvent('katiba-workspace-theme', { detail: preferences.theme }))
   if (cache) {
     try {
       localStorage.setItem('katibaAuthorPreferences', JSON.stringify(preferences))

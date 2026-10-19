@@ -9,6 +9,7 @@ export default defineConfig({
   ],
   server: {
     proxy: {
+      '^/admin(?:/|$)': { target: 'http://127.0.0.1:8000', changeOrigin: true },
       '/api': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
@@ -16,5 +17,3 @@ export default defineConfig({
     },
   },
 })
-// Add this directory matcher path inside your style config rules array:
-"./src/features/**/*.{js,ts,jsx,tsx}"

@@ -1,4 +1,9 @@
+import { sessionFetch } from '../../auth/session'
+import WorkspaceTools from './WorkspaceTools'
+import { signOut } from '../../auth/session'
 import AuthorSettings from './AuthorSettings'
+import { DashboardLayout, ThemeToggle } from '../../dashboard'
+import './author-workspace.css'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArticleEditor } from '../articles/components/ArticleEditor'
@@ -93,8 +98,8 @@ type ChartPoint = { label: string; value: number; secondary?: number }
 
 const PROFILE_ENDPOINT = '/api/users/author/profile/'
 const ACCOUNT_ENDPOINT = '/api/users/me/'
-const ARTICLES_ENDPOINT = '/api/articles/?all=true&page_size=100'
-const BLOGS_ENDPOINT = '/api/blogs/?page_size=100'
+const ARTICLES_ENDPOINT = '/api/articles/?mine=true&page_size=100'
+const BLOGS_ENDPOINT = '/api/blogs/?mine=true&page_size=100'
 const DASHBOARD_PATH = '/author/dashboard'
 
 const navItems: {
@@ -260,7 +265,8 @@ function getSession(): Session | null {
 }
 
 function getTabFromUrl(): Tab {
-  const requested = new URLSearchParams(window.location.search).get('tab')
+  const segment = window.location.pathname.replace(/\/+$/, '').split('/').pop()
+  const requested = new URLSearchParams(window.location.search).get('tab') || (segment === 'article' ? 'articles' : segment)
   return requested && validTabs.has(requested as Tab)
     ? (requested as Tab)
     : 'dashboard'
@@ -800,7 +806,6 @@ function PieChart({
   const total = data.reduce((sum, item) => sum + item.value, 0)
   const radius = 72
   const circumference = 2 * Math.PI * radius
-  let runningOffset = 0
 
   return (
     <section className="ad-chart-card">
@@ -829,10 +834,9 @@ function PieChart({
                 strokeWidth="25"
               />
               <g transform="rotate(-90 95 95)">
-                {data.filter((item) => item.value > 0).map((item) => {
+                {data.filter((item) => item.value > 0).map((item, index, visible) => {
                   const length = (item.value / total) * circumference
-                  const offset = runningOffset
-                  runningOffset += length
+                  const offset = visible.slice(0, index).reduce((sum, segment) => sum + (segment.value / total) * circumference, 0)
 
                   return (
                     <circle
@@ -984,16 +988,12 @@ function AuthorDashboard() {
 
   const token = session?.access
 
-  const logout = useCallback(() => {
-    sessionStorage.removeItem('katibaUserSession')
-    setSession(null)
-    window.location.replace('/signin')
-  }, [])
+  const logout = useCallback(() => { void signOut('/workspace') }, [])
 
   const handleUnauthorized = useCallback(() => {
     sessionStorage.removeItem('katibaUserSession')
     setSession(null)
-    window.location.replace('/signin')
+    window.location.replace('/workspace')
   }, [])
 
   const authenticatedFetch = useCallback(
@@ -1012,7 +1012,7 @@ function AuthorDashboard() {
         headers.set('Content-Type', 'application/json')
       }
 
-      const response = await fetch(url, { ...options, headers })
+      const response = await sessionFetch(url, { ...options, headers })
 
       if (response.status === 401) {
         handleUnauthorized()
@@ -1092,7 +1092,6 @@ function AuthorDashboard() {
       logout()
       return
     }
-    setSession(currentSession)
   }, [logout])
 
   const fetchAccount = useCallback(async () => {
@@ -1195,12 +1194,16 @@ function AuthorDashboard() {
 
   useEffect(() => {
     if (!token) return
-    void fetchContent()
+    let active = true
+    queueMicrotask(() => { if (active) void fetchContent() })
+    return () => { active = false }
   }, [token, fetchContent])
 
   useEffect(() => {
     if (!token || tab !== 'profile') return
-    void fetchProfile()
+    let active = true
+    queueMicrotask(() => { if (active) void fetchProfile() })
+    return () => { active = false }
   }, [tab, token, fetchProfile])
 
   const allContent = useMemo<ContentRecord[]>(
@@ -2180,56 +2183,9 @@ function AuthorDashboard() {
       )
     }
 
-    const pageInfo: Partial<Record<Tab, { title: string; description: string; icon: string }>> = {
-      news: {
-        title: 'News',
-        description: 'Your news-management workspace.',
-        icon: '▧',
-      },
-      media: {
-        title: 'Media library',
-        description: 'Manage images and other media resources.',
-        icon: '▣',
-      },
-      comments: {
-        title: 'Comments',
-        description: 'Review reader conversations and moderate comments.',
-        icon: '☏',
-      },
-      settings: {
-        title: 'Settings',
-        description: 'Manage your account and workspace preferences.',
-        icon: '⚙',
-      },
-    }
-
     if (tab === 'settings') return <AuthorSettings />
-
-    const info = pageInfo[tab]
-    if (!info) return null
-
-    return (
-      <section className="ad-panel">
-        <div className="ad-page-heading">
-          <div>
-            <span className="ad-eyebrow">WORKSPACE</span>
-            <h1>{info.title}</h1>
-            <p>{info.description}</p>
-          </div>
-        </div>
-        <div className="ad-empty">
-          <div className="ad-empty-icon">{info.icon}</div>
-          <h3>{info.title} is ready for integration</h3>
-          <p>
-            This section still needs its corresponding backend endpoint or
-            management component. No placeholder records are being invented.
-          </p>
-          <button className="ad-button" onClick={() => changeTab('dashboard')}>
-            Back to dashboard
-          </button>
-        </div>
-      </section>
-    )
+    if (tab === 'media' || tab === 'comments') return <WorkspaceTools key={tab} tool={tab} />
+    return <section className="ad-panel"><h1>News workspace</h1><p>Your news reporting tools use the same author navigation.</p><a href="/news/dashboard">Open News →</a></section>
   }
 
   if (!session) {
@@ -2245,249 +2201,12 @@ function AuthorDashboard() {
   const currentNavItem = navItems.find((item) => item.id === tab)
 
   return (
-    <div className="ad-shell">
-      <style>{`
-        .ad-shell {
-          --ink:#182b26;--muted:#788780;--green:#087f68;
-          --green-dark:#066650;--border:#e5ece8;--surface:#fff;
-          min-height:100vh;display:flex;background:#f6f8f7;color:var(--ink);
-          font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-        }
-        .ad-shell *{box-sizing:border-box}
-        .ad-shell button,.ad-shell input,.ad-shell textarea{font:inherit}
-        .ad-shell button:focus-visible,.ad-shell a:focus-visible,.ad-shell input:focus-visible,.ad-shell textarea:focus-visible{outline:3px solid #82d7bb;outline-offset:3px}
-        .ad-sidebar{width:235px;flex:0 0 235px;background:#142925;color:#e6f1ed;min-height:100vh;padding:22px 13px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
-        .ad-brand{display:flex;align-items:center;gap:11px;padding:5px 10px 29px}
-        .ad-brand-mark{display:grid;place-items:center;width:39px;height:39px;border-radius:12px;background:#6be0b5;color:#102923;font-weight:900;font-size:20px}
-        .ad-brand strong{display:block;color:#fff;font-size:16px;letter-spacing:-.5px}
-        .ad-brand small{display:block;color:#9db8af;font-size:9px;margin-top:4px;letter-spacing:1.2px}
-        .ad-nav-label{padding:0 12px 10px;color:#8ba49c;font-size:10px;font-weight:800;letter-spacing:1.4px}
-        .ad-nav{display:grid;gap:5px}
-        .ad-nav-button{display:flex;align-items:center;gap:12px;width:100%;min-height:42px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:#c1d0ca;cursor:pointer;text-align:left;font-size:12px;font-weight:600;transition:background .15s,color .15s}
-        .ad-nav-button:hover{background:#21413a;color:white}
-        .ad-nav-button.active{color:white;background:#087f68;box-shadow:0 5px 14px #061d1930}
-        .ad-nav-icon{width:20px;text-align:center;font-size:18px}
-        .ad-nav-separator{height:1px;margin:13px 8px;background:#304943}
-        .ad-nav-button.ad-logout{color:#ffc5c5}
-        .ad-nav-button.ad-logout:hover{background:#4b2c2c;color:white}
-        .ad-sidebar-bottom{margin-top:auto;padding:18px 8px 0}
-        .ad-sidebar-note{padding:14px;border:1px solid #2c4941;border-radius:12px;background:#19362f}
-        .ad-sidebar-note strong{font-size:11px;color:#e5f8f0}
-        .ad-sidebar-note p{color:#a4bdb5;font-size:10px;line-height:1.7;margin:8px 0 0}
-        .ad-main{flex:1;min-width:0}
-        .ad-topbar{min-height:72px;display:flex;align-items:center;gap:16px;padding:12px 30px;background:#fff;border-bottom:1px solid var(--border)}
-        .ad-topbar-title{font-size:13px;font-weight:800}
-        .ad-topbar-subtitle{display:block;color:var(--muted);font-size:10px;margin-top:4px;font-weight:400}
-        .ad-search{display:flex;align-items:center;gap:9px;margin-left:auto;width:min(320px,40%);padding:0 12px;height:38px;border-radius:10px;border:1px solid #e7eeea;background:#f8faf9;color:#7b8b85}
-        .ad-search input{min-width:0;width:100%;border:0;outline:none;background:transparent;color:var(--ink);font-size:12px}
-        .ad-user-chip{display:flex;align-items:center;gap:9px;padding-left:7px}
-        .ad-avatar{display:grid;place-items:center;width:35px;height:35px;flex-shrink:0;border-radius:50%;background:#dcf6e9;color:#08745f;font-weight:850;font-size:12px}
-        .ad-user-name{font-size:11px;font-weight:750}
-        .ad-user-role{display:block;margin-top:3px;color:var(--muted);font-size:10px}
-        .ad-content{width:100%;max-width:1700px;padding:29px 30px 48px;margin:0 auto}
-        .ad-welcome{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:25px}
-        .ad-welcome h1,.ad-page-heading h1{font-size:clamp(24px,3vw,32px);letter-spacing:-1.15px;margin:8px 0;line-height:1.2;font-weight:800}
-        .ad-welcome p,.ad-page-heading p{color:var(--muted);font-size:12px;margin:0;line-height:1.7}
-        .ad-eyebrow{display:block;color:#07866c;font-size:9px;font-weight:850;letter-spacing:1.5px;text-transform:uppercase}
-        .ad-last-updated{display:flex;align-items:center;gap:7px;margin-top:10px;color:#7e8c86;font-size:10px}
-        .ad-last-updated i{width:6px;height:6px;border-radius:50%;background:#159b76}
-        .ad-welcome-actions{display:flex;gap:9px;flex-wrap:wrap}
-        .ad-button{display:inline-flex;justify-content:center;align-items:center;gap:8px;border:0;border-radius:9px;background:var(--green);color:#fff;padding:11px 15px;font-size:11px;font-weight:750;cursor:pointer;transition:background .15s,transform .15s}
-        .ad-button:hover{background:var(--green-dark);transform:translateY(-1px)}
-        .ad-button:disabled{opacity:.65;cursor:wait;transform:none}
-        .ad-button-light{background:#fff;color:var(--ink);border:1px solid var(--border)}
-        .ad-button-light:hover{background:#f1f7f4}
-        .ad-refreshing{display:inline-block;animation:ad-spin .7s linear infinite}
-        .ad-stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
-        .ad-stats-grid-secondary{grid-template-columns:repeat(4,minmax(0,1fr))}
-        .ad-stat{min-width:0;position:relative;overflow:hidden;padding:18px 19px;border-radius:13px;border:1px solid var(--border);background:#fff;box-shadow:0 2px 8px #163b2a05}
-        .ad-stat:before{content:"";position:absolute;top:0;left:0;width:3px;height:100%;background:#159b76}
-        .ad-stat-blue:before{background:#3984d6}
-        .ad-stat-purple:before{background:#7770d6}
-        .ad-stat-orange:before{background:#e6a23c}
-        .ad-stat-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
-        .ad-stat-label{color:var(--muted);font-size:11px;font-weight:650}
-        .ad-stat-icon{display:grid;place-items:center;width:33px;height:33px;border-radius:10px;background:#eaf8f1;color:#087b64;font-size:16px}
-        .ad-stat-blue .ad-stat-icon{background:#edf5ff;color:#3984d6}
-        .ad-stat-purple .ad-stat-icon{background:#f1efff;color:#7770d6}
-        .ad-stat-orange .ad-stat-icon{background:#fff4df;color:#c18318}
-        .ad-stat-value{display:block;margin-top:14px;font-size:29px;line-height:1.1;letter-spacing:-1px;font-weight:850;overflow-wrap:anywhere}
-        .ad-stat-foot{margin-top:8px;color:#89958f;font-size:10px;line-height:1.5}
-        .ad-chart-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:17px;margin-bottom:19px}
-        .ad-chart-card{min-width:0;padding:21px;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:0 2px 8px #163b2a04}
-        .ad-chart-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-        .ad-chart-heading h3{margin:0;font-size:13px;letter-spacing:-.2px;font-weight:800}
-        .ad-chart-heading p{margin:7px 0 0;color:var(--muted);font-size:10px;line-height:1.6}
-        .ad-chart-total{text-align:right;flex-shrink:0}
-        .ad-chart-total strong{display:block;font-size:22px;letter-spacing:-.7px}
-        .ad-chart-total span{color:var(--muted);font-size:10px}
-        .ad-chart-scroll{width:100%;overflow-x:auto;margin-top:19px}
-        .ad-svg-chart{display:block;width:100%;min-width:330px;height:auto;overflow:visible}
-        .ad-chart-legend{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:13px}
-        .ad-chart-legend span{display:inline-flex;align-items:center;gap:7px;color:#72817a;font-size:10px}
-        .ad-chart-legend i{width:8px;height:8px;border-radius:3px;display:inline-block}
-        .ad-pie-layout{display:grid;grid-template-columns:minmax(130px,.85fr) minmax(0,1fr);align-items:center;gap:14px;margin-top:12px}
-        .ad-pie-graphic{min-width:0;display:flex;justify-content:center;align-items:center}
-        .ad-pie-graphic svg{display:block;width:100%;max-width:190px;height:auto}
-        .ad-pie-legend{display:grid;gap:12px;min-width:0}
-        .ad-pie-legend-row{display:grid;grid-template-columns:minmax(0,1fr) 28px 38px;gap:7px;align-items:center;font-size:10px}
-        .ad-pie-legend-name{display:flex;align-items:center;gap:7px;min-width:0;color:#61716a}
-        .ad-pie-legend-name>span{overflow-wrap:anywhere}
-        .ad-pie-legend-name i{width:8px;height:8px;border-radius:3px;flex-shrink:0}
-        .ad-pie-legend-row strong{text-align:right;color:#253a32}
-        .ad-pie-percent{text-align:right;color:#85918b;font-size:9px}
-        .ad-chart-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;min-height:160px;color:var(--muted);font-size:11px;text-align:center}
-        .ad-chart-empty p{line-height:1.7}
-        .ad-pie-empty{display:grid;place-items:center;width:85px;height:85px;border:13px solid #edf2ef;border-radius:50%;color:#86938c;font-size:18px;font-weight:800}
-        .ad-category-list{display:grid;gap:15px;margin-top:22px}
-        .ad-category-row{display:grid;grid-template-columns:minmax(0,1fr) 35px;gap:7px 10px;align-items:center}
-        .ad-category-top{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#5e6f67;font-size:10px;min-width:0}
-        .ad-category-top>span{display:flex;align-items:center;gap:7px;min-width:0;overflow-wrap:anywhere}
-        .ad-category-top i{display:inline-block;width:8px;height:8px;border-radius:3px;flex-shrink:0}
-        .ad-category-top strong{color:#273b33}
-        .ad-category-row .ad-progress-track{grid-column:1/2}
-        .ad-category-percent{grid-column:2;grid-row:1/3;color:#839089;text-align:right;font-size:10px}
-        .ad-progress-track{height:7px;overflow:hidden;border-radius:10px;background:#eef2ef}
-        .ad-progress-fill{height:100%;border-radius:10px;transition:width .3s}
-        .ad-panel,.ad-editor-panel{margin-bottom:20px;padding:22px;background:#fff;border:1px solid var(--border);border-radius:14px;min-width:0}
-        .ad-panel-heading,.ad-page-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:20px}
-        .ad-panel-heading h2{margin:7px 0 0;font-size:17px;letter-spacing:-.4px;font-weight:800}
-        .ad-section-subtitle{margin:7px 0 0;color:var(--muted);font-size:11px;line-height:1.6}
-        .ad-text-button{border:0;background:transparent;color:var(--green);font-size:11px;font-weight:800;cursor:pointer;white-space:nowrap}
-        .ad-table-wrap{width:100%;overflow-x:auto}
-        .ad-table{width:100%;border-collapse:collapse;text-align:left;min-width:650px}
-        .ad-table th{padding:12px 10px;border-bottom:1px solid var(--border);color:#81918a;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.7px}
-        .ad-table td{padding:14px 10px;border-bottom:1px solid #eef2f0;color:#596a63;font-size:10px;vertical-align:top}
-        .ad-table tbody tr:last-child td{border-bottom:0}
-        .ad-table td strong{display:block;color:#20352d;font-size:11px}
-        .ad-table td p{max-width:440px;margin:5px 0 0;line-height:1.6;color:#87958e}
-        .ad-status{display:inline-block;border-radius:20px;padding:5px 9px;font-size:9px;font-weight:750;background:#edf0ef;color:#596a65;white-space:nowrap}
-        .ad-status-published{background:#e4f7ed;color:#087f55}
-        .ad-status-draft{background:#f0edff;color:#6b58b4}
-        .ad-status-under-review,.ad-status-under_review,.ad-status-in_review,.ad-status-pending_review{background:#fff3d7;color:#a76b0b}
-        .ad-status-rejected{background:#fff0ef;color:#b74d49}
-        .ad-status-scheduled{background:#edf5ff;color:#2e70bd}
-        .ad-blog-list{display:grid}
-        .ad-blog-row{display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #edf1ef}
-        .ad-blog-row:last-child{border-bottom:0}
-        .ad-blog-icon{display:grid;place-items:center;width:37px;height:37px;border-radius:10px;background:#edf7f2;color:#087f68;font-size:17px;flex-shrink:0}
-        .ad-blog-main{flex:1;min-width:0}
-        .ad-blog-row strong{display:block;font-size:11px;overflow-wrap:anywhere}
-        .ad-blog-row p{margin:5px 0 0;font-size:10px;color:var(--muted);line-height:1.5}
-        .ad-blog-likes{color:#6c7d77;font-size:10px;white-space:nowrap}
-        .ad-two-column{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:17px}
-        .ad-two-column .ad-panel{min-width:0}
-        .ad-activity-list{display:grid}
-        .ad-activity-row{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid #edf1ef}
-        .ad-activity-row:last-child{border-bottom:0}
-        .ad-activity-marker{width:31px;height:31px;display:grid;place-items:center;flex-shrink:0;border-radius:9px;background:#e7f7ee;color:#087f68}
-        .ad-activity-marker.blog-marker{background:#f0edff;color:#6b58b4}
-        .ad-activity-copy{min-width:0;flex:1}
-        .ad-activity-copy strong{display:block;font-size:11px;overflow-wrap:anywhere}
-        .ad-activity-copy p{margin:5px 0;color:#788981;font-size:10px}
-        .ad-activity-copy>span{color:#9aa69f;font-size:9px}
-        .ad-activity-note{margin:14px 0 0;color:#8b9892;font-size:9px;line-height:1.7}
-        .ad-profile-hero{display:flex;align-items:center;gap:16px;padding:20px;margin-bottom:18px;border:1px solid #dbeee5;border-radius:13px;background:linear-gradient(120deg,#f0fbf5,#fff)}
-        .ad-profile-hero-copy{flex:1;min-width:0}
-        .ad-avatar-large{width:58px;height:58px;font-size:19px}
-        .ad-profile-hero h2{margin:6px 0;font-size:20px}
-        .ad-profile-hero p{margin:0;color:var(--muted);font-size:11px}
-        .ad-profile-hero-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
-        .ad-profile-section{padding:21px 0;border-bottom:1px solid var(--border)}
-        .ad-profile-section:last-child{border-bottom:0}
-        .ad-profile-section h3{font-size:13px;margin:0 0 16px}
-        .ad-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
-        .ad-profile-field{min-width:0}
-        .ad-profile-field>span{display:block;color:#82918d;font-size:10px;font-weight:750;margin-bottom:6px}
-        .ad-profile-field p,.ad-profile-field a{display:block;margin:0;color:#243a34;font-size:12px;line-height:1.7;overflow-wrap:anywhere;white-space:pre-wrap}
-        .ad-profile-field a{color:#087f68;text-decoration:underline}
-        .ad-profile-edit-field{display:block;min-width:0}
-        .ad-profile-edit-label{display:block;color:#52645c;font-size:10px;font-weight:750;margin-bottom:7px}
-        .ad-profile-input{display:block;width:100%;min-width:0;min-height:42px;padding:10px 12px;border:1px solid #dce7e1;border-radius:9px;background:#fff;color:#243a34;font-size:12px;line-height:1.6}
-        .ad-profile-input:focus{border-color:#087f68;outline:none;box-shadow:0 0 0 3px #087f681c}
-        .ad-profile-textarea{min-height:105px;resize:vertical}
-        .ad-profile-edit-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;padding-top:22px;margin-top:12px;border-top:1px solid var(--border)}
-        .ad-muted{color:var(--muted);font-size:11px;line-height:1.7}
-        .ad-alert{padding:16px 18px;border-radius:11px;margin-bottom:19px;font-size:11px}
-        .ad-alert p{line-height:1.7}
-        .ad-alert-error{color:#9b3333;background:#fff2f1;border:1px solid #f4d2ce}
-        .ad-alert-success{color:#086847;background:#e9f9f0;border:1px solid #bdebd0}
-        .ad-empty,.ad-state{padding:32px 20px;text-align:center;color:var(--muted)}
-        .ad-empty.compact{padding:20px 10px}
-        .ad-empty h3{color:var(--ink);font-size:14px;margin:10px 0 7px}
-        .ad-empty p,.ad-state p{font-size:11px;line-height:1.7;max-width:450px;margin:0 auto 16px}
-        .ad-empty-icon{margin:0 auto;display:grid;place-items:center;width:44px;height:44px;border-radius:13px;background:#e8f7ef;color:#087f68;font-size:21px}
-        .ad-spinner{display:inline-block;width:24px;height:24px;border:3px solid #dcebe4;border-top-color:#087f68;border-radius:50%;animation:ad-spin .7s linear infinite}
-        .ad-inline-loading{padding:24px 10px;color:var(--muted);font-size:11px}
-        .ad-chart-loading{display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:280px}
-        .ad-chart-loading p{color:var(--muted);font-size:11px}
-        .ad-auth-required{max-width:540px;margin:10vh auto;padding:40px;text-align:center;font-family:system-ui,sans-serif}
-        .ad-auth-required h1{font-size:25px}
-        @keyframes ad-spin{to{transform:rotate(360deg)}}
-        @media(min-width:1500px){.ad-stats-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.ad-stats-grid-secondary{grid-template-columns:repeat(4,minmax(0,1fr))}}
-        @media(max-width:1200px){.ad-sidebar{width:215px;flex-basis:215px}.ad-content{padding:24px 20px 40px}.ad-topbar{padding:12px 20px}.ad-stats-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.ad-stats-grid-secondary{grid-template-columns:repeat(2,minmax(0,1fr))}.ad-pie-layout{grid-template-columns:1fr}.ad-pie-graphic svg{max-width:155px}.ad-pie-legend{gap:9px}}
-        @media(max-width:900px){.ad-chart-grid,.ad-two-column{grid-template-columns:minmax(0,1fr)}.ad-pie-layout{grid-template-columns:minmax(130px,.7fr) minmax(0,1fr)}}
-        @media(max-width:720px){
-          .ad-shell{display:block}.ad-sidebar{position:static;width:100%;height:auto;min-height:0;padding:12px}
-          .ad-brand{padding:5px 7px 15px}.ad-nav-label,.ad-sidebar-bottom{display:none}
-          .ad-nav{display:flex;overflow-x:auto;gap:5px;padding-bottom:4px}
-          .ad-nav-button{width:auto;min-width:max-content;padding:0 11px;min-height:38px}
-          .ad-nav-separator{display:none}.ad-topbar{min-height:62px;padding:12px;flex-wrap:wrap;gap:10px}
-          .ad-search{order:3;width:100%;max-width:none;margin:0}.ad-user-chip{margin-left:auto}
-          .ad-content{padding:20px 12px 35px}.ad-welcome{align-items:flex-start;flex-direction:column}
-          .ad-welcome-actions{width:100%}.ad-welcome-actions .ad-button{flex:1}
-          .ad-stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.ad-stat{padding:14px}.ad-stat-value{font-size:25px}
-          .ad-panel,.ad-editor-panel,.ad-chart-card{padding:16px}.ad-profile-grid{grid-template-columns:1fr}
-          .ad-profile-hero{align-items:flex-start;flex-wrap:wrap}.ad-profile-hero-actions{width:100%}
-          .ad-profile-hero-actions .ad-button{flex:1}.ad-profile-edit-actions .ad-button{flex:1}
-          .ad-panel-heading,.ad-page-heading{align-items:flex-start}
-          .ad-pie-layout{grid-template-columns:minmax(100px,.7fr) minmax(0,1fr);gap:7px}
-          .ad-pie-legend-row{grid-template-columns:minmax(0,1fr) 22px 30px;gap:5px}
-        }
-        @media(max-width:390px){.ad-stats-grid{grid-template-columns:1fr 1fr}.ad-stat-label{font-size:10px}.ad-stat-foot{font-size:9px}.ad-topbar-title{font-size:12px}.ad-user-name{max-width:110px;overflow-wrap:anywhere}.ad-chart-card{padding:13px}.ad-pie-layout{grid-template-columns:1fr}.ad-pie-graphic svg{max-width:140px}}
-      `}</style>
+    <DashboardLayout className="author-workspace" workspace="AUTHOR WORKSPACE"
+      items={[...navItems.map(item => ({ id: item.id, label: `${item.icon} ${item.label}` })), { id: 'logout', label: '↪ Sign out' }]}
+      activeItem={tab} onNavigate={id => id === 'logout' ? logout() : changeTab(id as Tab)}>
 
-      <aside className="ad-sidebar">
-        <div className="ad-brand">
-          <div className="ad-brand-mark">K</div>
-          <div>
-            <strong>Katiba News</strong>
-            <small>AUTHOR WORKSPACE</small>
-          </div>
-        </div>
 
-        <div className="ad-nav-label">WORKSPACE</div>
-        <nav className="ad-nav" aria-label="Author dashboard navigation">
-          {navItems.map((item, index) => (
-            <React.Fragment key={item.id}>
-              {index === 8 && <div className="ad-nav-separator" />}
-              <button
-                type="button"
-                className={`ad-nav-button ${tab === item.id ? 'active' : ''}`}
-                onClick={() => changeTab(item.id)}
-                aria-current={tab === item.id ? 'page' : undefined}
-                title={item.description}
-              >
-                <span className="ad-nav-icon" aria-hidden="true">{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            </React.Fragment>
-          ))}
-          <button type="button" className="ad-nav-button ad-logout" onClick={logout}>
-            <span className="ad-nav-icon" aria-hidden="true">↪</span>
-            <span>Logout</span>
-          </button>
-        </nav>
-
-        <div className="ad-sidebar-bottom">
-          <div className="ad-sidebar-note">
-            <strong>Write with purpose.</strong>
-            <p>Clear reporting and reliable information help people understand the decisions that affect them.</p>
-          </div>
-        </div>
-      </aside>
-
-      <main className="ad-main">
+      <div className="ad-main">
         <header className="ad-topbar">
           <div>
             <div className="ad-topbar-title">{currentNavItem?.label || 'Overview'}</div>
@@ -2506,13 +2225,14 @@ function AuthorDashboard() {
             />
           </label>
 
-          <div className="ad-user-chip">
+          <ThemeToggle />
+          <button type="button" className="ad-user-chip" onClick={() => changeTab('profile')} aria-label="View your profile">
             <div className="ad-avatar">{initials || 'A'}</div>
             <div>
               <div className="ad-user-name">{authorName}</div>
               <span className="ad-user-role">{session.role || 'Author'}</span>
             </div>
-          </div>
+          </button>
         </header>
 
         <div className="ad-content" onClickCapture={handleDashboardBackCapture}>
@@ -2576,8 +2296,8 @@ function AuthorDashboard() {
             renderContent()
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }
 

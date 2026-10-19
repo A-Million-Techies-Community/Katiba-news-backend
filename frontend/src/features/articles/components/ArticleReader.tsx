@@ -159,7 +159,9 @@ export const ArticleReader: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    void fetchArticles();
+    let active = true;
+    queueMicrotask(() => { if (active) void fetchArticles(); });
+    return () => { active = false; };
   }, [fetchArticles]);
 
   const toggleExpanded = (articleId: number) => {

@@ -6,6 +6,8 @@ class Article(models.Model):
     class Status(models.TextChoices):
         DRAFT = 'draft', 'Draft'
         UNDER_REVIEW = 'under_review', 'Under Review'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Needs changes'
         PUBLISHED = 'published', 'Published'
 
     title = models.CharField(max_length=255)
@@ -14,6 +16,10 @@ class Article(models.Model):
     status = models.CharField(max_length=15, choices=Status.choices, default=Status.DRAFT)
     
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='articles')
+    feedback = models.TextField(blank=True)
+    reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='reviewed_articles')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
