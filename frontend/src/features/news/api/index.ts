@@ -1,7 +1,8 @@
 /** Use this tab's explicit account login, never an unrelated Django admin session. */
 export async function newsFetch(path: string, method = 'GET', body?: unknown): Promise<Response> {
   let access: string | undefined
-  try { access = JSON.parse(sessionStorage.getItem('katibaUserSession') || '{}').access }
+  const editorRoute = window.location.pathname === '/editor' || /^\/news\/dashboard\/editor(?:\/|$)/.test(window.location.pathname)
+  try { access = JSON.parse(sessionStorage.getItem(editorRoute ? 'katibaEditorSession' : 'katibaUserSession') || '{}').access }
   catch { /* A malformed saved login is handled as signed out below. */ }
   if (!access) throw new Error('Sign in with your Writer or Editor account on the main website, then open News dashboard.')
   const multipart = body instanceof FormData
