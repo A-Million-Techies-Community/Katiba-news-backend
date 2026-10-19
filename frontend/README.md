@@ -10,7 +10,7 @@ The “Staff sign in” link opens `/workspace`, offering separate Writer (`/wri
 - Editor: review and publish submissions.
 - Admin: create, assign, activate, and suspend writer and editor accounts at `/workspace/admin`.
 
-Administrator tools require an active superuser account. The URL being unlisted does not replace server-side authorization. Django's `/admin/` remains available for authenticated administrators doing advanced maintenance.
+Newsroom Admin is a separate account in the `Workspace Administrator` group, with `is_staff=False` and `is_superuser=False`. It manages Writer/Editor accounts and applications but cannot grant Admin/Superuser access or use Django administration. Create one from the project root with `.venv/bin/python manage.py createadmin`; the command prompts for a username, email, and password. Django superusers use `/admin/` for system administration. The URL being unlisted does not replace server-side authorization.
 
 Run `npm run lint` and `npm run build` to validate frontend changes.
 

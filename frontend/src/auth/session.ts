@@ -1,6 +1,6 @@
 export type WorkspaceAccount = {
   username: string
-  role: 'Author' | 'Editor' | 'Administrator' | null
+  role: 'Author' | 'Editor' | 'Administrator' | 'Superuser' | null
   workspace_url: string | null
 }
 export function saveSession(account: WorkspaceAccount, tokens: { access: string; refresh?: string }) {
