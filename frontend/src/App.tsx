@@ -629,7 +629,7 @@ function App() {
     setPassword('')
     setMessage('')
 
-    window.location.assign('/news/dashboard')
+    window.location.assign('/author/dashboard')
   }
 
   function enterOnboarding(session: Session) {
@@ -972,7 +972,7 @@ function App() {
 
       setSignedInUser(session)
       setMessage('')
-      window.location.assign('/news/dashboard')
+      window.location.assign('/author/dashboard')
     } catch (error) {
       console.error('Profile submission error:', error)
 
