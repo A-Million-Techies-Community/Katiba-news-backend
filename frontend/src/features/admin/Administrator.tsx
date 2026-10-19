@@ -18,7 +18,7 @@ export default function Administrator() {
   const [search, setSearch] = useState('')
   async function load() {
     const response = await sessionFetch('/api/users/accounts/')
-    if (!response.ok) throw new Error('Administrator access is required. Sign in with a superuser account.')
+    if (!response.ok) throw new Error('Administrator access is required. Sign in with your newsroom admin account.')
     setAccounts(await response.json())
     setReady(true)
   }
@@ -45,7 +45,7 @@ export default function Administrator() {
     finally { setBusy(false) }
   }
   if (!ready) return <p role="status">{error || 'Loading account management…'}</p>
-  return <DashboardLayout workspace="ADMINISTRATION" items={[{ id: 'accounts', label: '♙ Writers & editors' }, { id: 'applications', label: 'Staff applications' }, { id: 'django', label: 'Advanced administration', href: '/admin/' }]} activeItem={tab} onNavigate={next => { setTab(next); if (next === 'accounts') void load().catch(err => setError(err.message)) }} disabled={busy}>
+  return <DashboardLayout workspace="ADMINISTRATION" items={[{ id: 'accounts', label: '♙ Writers & editors' }, { id: 'applications', label: 'Staff applications' }]} activeItem={tab} onNavigate={next => { setTab(next); if (next === 'accounts') void load().catch(err => setError(err.message)) }} disabled={busy}>
     <header className="nd-top"><strong>Account management</strong><div className="nd-account"><ThemeToggle /><button onClick={() => void signOut('/administration/login')}>Sign out</button></div></header>
     {tab === 'applications' ? <StaffApplications /> : <>
     <div className="nd-heading"><div><p className="nd-eyebrow">PEOPLE & ACCESS</p><h1>Writers and editors</h1><p>Create accounts, assign newsroom access, and suspend accounts.</p></div></div>

@@ -8,7 +8,8 @@ from apps.users.models import User
 class StaffAccessTests(TestCase):
     def setUp(self):
         self.client = APIClient()
-        self.admin = User.objects.create_superuser(username='admin', email='admin@example.test', password='Administrator-password-829!')
+        self.admin = User.objects.create_user(username='admin', email='admin@example.test', password='Administrator-password-829!')
+        self.admin.groups.add(Group.objects.get(name='Workspace Administrator'))
         self.writer = User.objects.create_user(username='writer', email='writer@example.test')
         self.writer.groups.add(Group.objects.get(name='Author'))
         self.editor = User.objects.create_user(username='editor', email='editor@example.test')

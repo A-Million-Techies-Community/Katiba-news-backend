@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from .models import AuthorProfile, User
-from .access import eligible_author, editorial_access
+from .access import eligible_author, editorial_access, administer_newsroom
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -15,6 +15,8 @@ class UserSerializer(serializers.ModelSerializer):
         if not user.is_active:
             return None
         if user.is_superuser:
+            return '/admin/'
+        if administer_newsroom(user):
             return '/workspace/admin'
         if eligible_author(user):
             return '/author/dashboard' if self.get_profile_complete(user) else '/author/complete-profile'
@@ -23,7 +25,7 @@ class UserSerializer(serializers.ModelSerializer):
         return None
 
     def get_role(self, user):
-        return 'Administrator' if user.is_superuser else 'Author' if eligible_author(user) else 'Editor' if editorial_access(user) else None
+        return 'Superuser' if user.is_superuser else 'Administrator' if administer_newsroom(user) else 'Author' if eligible_author(user) else 'Editor' if editorial_access(user) else None
 
     def get_is_author(self, user):
         return eligible_author(user)
@@ -32,7 +34,7 @@ class UserSerializer(serializers.ModelSerializer):
         return editorial_access(user)
 
     def get_is_administrator(self, user):
-        return user.is_active and user.is_superuser
+        return administer_newsroom(user)
 
     profile_complete = serializers.SerializerMethodField()
 

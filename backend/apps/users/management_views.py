@@ -8,13 +8,14 @@ from rest_framework import permissions, serializers
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import User
+from .access import administer_newsroom, WORKSPACE_ADMIN
 from .account_service import assign_newsroom_role
 from .serializers import UserSerializer
 
 
 class AdministratorOnly(permissions.BasePermission):
     def has_permission(self, request, view):
-        return bool(request.user.is_authenticated and request.user.is_active and request.user.is_superuser)
+        return administer_newsroom(request.user)
 
 
 class AccountInput(serializers.Serializer):
@@ -24,12 +25,17 @@ class AccountInput(serializers.Serializer):
     newsroom_role = serializers.ChoiceField(choices=['Author', 'Editor'], required=False)
     is_active = serializers.BooleanField(required=False)
 
+    def validate(self, attrs):
+        if set(self.initial_data) - set(self.fields):
+            raise serializers.ValidationError('Only writer and editor account details may be changed.')
+        return attrs
+
 
 class AccountManagement(APIView):
     permission_classes = [AdministratorOnly]
 
     def get(self, request):
-        query = User.objects.exclude(staff_application__status__in=['pending', 'rejected']).order_by('username')
+        query = User.objects.filter(is_superuser=False, is_staff=False).exclude(groups__name=WORKSPACE_ADMIN).exclude(staff_application__status__in=['pending', 'rejected']).order_by('username')
         search = request.query_params.get('search', '').strip()
         if search:
             from django.db.models import Q
@@ -45,7 +51,7 @@ class AccountManagement(APIView):
         account = get_object_or_404(User.objects.select_for_update(), pk=pk)
         if hasattr(account, 'staff_application') and account.staff_application.status != 'approved':
             raise serializers.ValidationError('Review this application before managing its account.')
-        if account.is_superuser:
+        if account.is_superuser or account.is_staff or account.groups.filter(name=WORKSPACE_ADMIN).exists():
             raise serializers.ValidationError('Administrator accounts are managed through Django Admin, not this form.')
         return self.save_account(request, account)
 

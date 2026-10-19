@@ -11,7 +11,8 @@ class StaffApplicationTests(TestCase):
     def setUp(self):
         cache.clear()
         self.client = APIClient()
-        self.admin = User.objects.create_superuser(username='application-admin', email='admin@example.test', password='Admin-password-924!')
+        self.admin = User.objects.create_user(username='application-admin', email='admin@example.test', password='Admin-password-924!')
+        self.admin.groups.add(Group.objects.get(name='Workspace Administrator'))
 
     def payload(self, role='Writer'):
         return {'username': 'new-' + role.lower(), 'email': role.lower() + '@example.test', 'first_name': 'New', 'last_name': role,
