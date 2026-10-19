@@ -1,3 +1,4 @@
+import { sessionFetch } from '../../../auth/session'
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -5,7 +6,7 @@ interface ArticleEditorProps {
   onBackToDashboard?: () => void;
 }
 
-type ArticleStatus = "draft" | "under_review" | "published";
+type ArticleStatus = "draft" | "under_review" | "approved" | "rejected" | "published";
 type ViewMode = "library" | "editor" | "preview";
 type FilterStatus = "all" | ArticleStatus;
 
@@ -32,6 +33,7 @@ interface ArticleRecord {
   id: string | number;
   title: string;
   content: string;
+  feedback?: string;
   status?: string;
   slug?: string;
   created_at?: string;
@@ -70,11 +72,15 @@ const statusLabels: Record<ArticleStatus, string> = {
   draft: "Draft",
   under_review: "Under review",
   published: "Published",
+  approved: "Approved",
+  rejected: "Needs changes",
 };
 
 const statusStyles: Record<ArticleStatus, string> = {
   draft: "bg-slate-100 text-slate-700",
   under_review: "bg-amber-100 text-amber-800",
+  approved: "bg-emerald-50 text-emerald-800",
+  rejected: "bg-red-50 text-red-700",
   published: "bg-emerald-100 text-emerald-800",
 };
 
@@ -101,7 +107,7 @@ function normalizeStatus(value: unknown): ArticleStatus {
     return "under_review";
   }
 
-  if (value === "published") return "published";
+  if (value === "published" || value === "approved" || value === "rejected") return value;
 
   return "draft";
 }
@@ -175,7 +181,10 @@ function getErrorMessage(data: unknown, fallback: string): string {
 export const ArticleEditor: React.FC<ArticleEditorProps> = ({
   onBackToDashboard,
 }) => {
-  const [form, setForm] = useState<ArticleForm>(emptyForm);
+  const [form, setForm] = useState<ArticleForm>(() => {
+    try { return { ...emptyForm, author: JSON.parse(sessionStorage.getItem('katibaUserSession') || '{}').username || '' } }
+    catch { return emptyForm }
+  });
   const [articles, setArticles] = useState<ArticleRecord[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [view, setView] = useState<ViewMode>("library");
@@ -228,7 +237,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
     setMessage("");
 
     try {
-      const response = await fetch(API_URL, {
+      const response = await sessionFetch(`${API_URL}?mine=true`, {
         method: "GET",
         headers: getHeaders(),
       });
@@ -281,22 +290,9 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
   }, [getHeaders]);
 
   useEffect(() => {
-    try {
-      const rawSession = sessionStorage.getItem("katibaUserSession");
-
-      if (rawSession) {
-        const session = JSON.parse(rawSession);
-
-        setForm((previous) => ({
-          ...previous,
-          author: session.username || previous.author,
-        }));
-      }
-    } catch {
-      // The editor remains usable; authentication is checked on API requests.
-    }
-
-    void loadArticles();
+    let active = true;
+    queueMicrotask(() => { if (active) void loadArticles(); });
+    return () => { active = false; };
   }, [loadArticles]);
 
   const updateField = <K extends keyof ArticleForm>(
@@ -402,7 +398,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
         ? `${API_URL}${encodeURIComponent(editingId)}/`
         : API_URL;
 
-      const response = await fetch(url, {
+      const response = await sessionFetch(url, {
         method: isEditing ? "PATCH" : "POST",
         headers: getHeaders(),
         body: JSON.stringify(payload),
@@ -467,7 +463,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
     setMessage("");
 
     try {
-      const response = await fetch(
+      const response = await sessionFetch(
         `${API_URL}${encodeURIComponent(identifier)}/`,
         {
           method: "DELETE",
@@ -535,7 +531,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
     setMessage("");
 
     try {
-      const response = await fetch(
+      const response = await sessionFetch(
         `${API_URL}${encodeURIComponent(identifier)}/`,
         {
           method: "PATCH",
@@ -585,6 +581,8 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
   const counts = useMemo(
     () => ({
       all: articles.length,
+      approved: articles.filter(a => a.status === 'approved').length,
+      rejected: articles.filter(a => a.status === 'rejected').length,
       draft: articles.filter(
         (article) => normalizeStatus(article.status) === "draft"
       ).length,
@@ -912,15 +910,15 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
                               Preview
                             </button>
 
-                            <button
+                            {(status === "draft" || status === "rejected") && <button
                               type="button"
                               onClick={() => editArticle(article)}
                               className="rounded-lg bg-blue-700 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-800"
                             >
                               Edit
-                            </button>
+                            </button>}
 
-                            {status === "draft" && (
+                            {(status === "draft" || status === "rejected") && (
                               <button
                                 type="button"
                                 onClick={() =>
@@ -932,54 +930,11 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
                               </button>
                             )}
 
-                            {status === "under_review" && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    void changeStatus(article, "published")
-                                  }
-                                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-100"
-                                >
-                                  Publish
-                                </button>
+                            {(status === 'draft' || status === 'rejected') && <button disabled={deletingId === getArticleIdentifier(article)} onClick={() => void deleteArticle(article)} className="text-red-700">Delete draft</button>}
+                            {article.feedback && <p className="text-slate-600">Editor feedback: {article.feedback}</p>}
+                            {status === 'under_review' && <span className="text-sm text-slate-500">Awaiting editor review</span>}
+                            {status === 'approved' && <span className="text-sm text-slate-500">Approved · awaiting publication</span>}
 
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    void changeStatus(article, "draft")
-                                  }
-                                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-50"
-                                >
-                                  Return to draft
-                                </button>
-                              </>
-                            )}
-
-                            {status === "published" && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void changeStatus(article, "draft")
-                                }
-                                className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-50"
-                              >
-                                Unpublish
-                              </button>
-                            )}
-
-                            <button
-                              type="button"
-                              onClick={() => void deleteArticle(article)}
-                              disabled={
-                                deletingId === getArticleIdentifier(article)
-                              }
-                              className="rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
-                            >
-                              {deletingId === getArticleIdentifier(article)
-                                ? "Deleting..."
-                                : "Delete"}
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -1113,7 +1068,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
                     >
                       <option value="draft">Draft</option>
                       <option value="under_review">Under review</option>
-                      <option value="published">Published</option>
+
                     </select>
                   </div>
                 </div>
@@ -1506,15 +1461,15 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({
                   Back to articles
                 </button>
 
-                <button
+                {(form.status === 'draft' || form.status === 'rejected') && <button
                   type="button"
                   onClick={() => setView("editor")}
                   className="rounded-xl bg-blue-700 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-800"
                 >
                   Edit article
-                </button>
+                </button>}
 
-                {editingId && (
+                {editingId && (form.status === 'draft' || form.status === 'rejected') && (
                   <button
                     type="button"
                     onClick={() => {

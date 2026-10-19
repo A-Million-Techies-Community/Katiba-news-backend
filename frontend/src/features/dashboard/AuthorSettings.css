@@ -1,24 +1,24 @@
 .as-settings {
-  color: #20332c;
+  color: var(--nd-text);
   width: 100%;
 }
 .as-intro { margin-bottom: 22px; }
 .as-eyebrow {
-  display: block; color: #087f68; font-size: 10px; font-weight: 800;
+  display: block; color: var(--nd-accent); font-size: 10px; font-weight: 800;
   letter-spacing: 1.6px; margin-bottom: 7px;
 }
 .as-intro h1 { font-size: clamp(26px, 3vw, 34px); line-height: 1.15; margin: 0; letter-spacing: -1px; }
-.as-intro p { color: #788780; font-size: 13px; line-height: 1.6; margin: 9px 0 0; }
+.as-intro p { color: var(--nd-muted); font-size: 13px; line-height: 1.6; margin: 9px 0 0; }
 .as-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .as-card {
-  background: #fff; border: 1px solid #e2ebe6; border-radius: 15px;
+  background: var(--nd-surface); border: 1px solid var(--nd-border); border-radius: 15px;
   padding: 21px; min-width: 0; box-shadow: 0 2px 9px rgba(28, 54, 43, .025);
 }
 .as-card-wide { grid-column: 1 / -1; }
 .as-card-heading { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 17px; }
 .as-icon {
   display: grid; place-items: center; flex: 0 0 38px; height: 38px;
-  border-radius: 11px; background: #e6f6ef; color: #087f68; font-size: 21px;
+  border-radius: 11px; background: var(--nd-accent-soft); color: var(--nd-accent); font-size: 21px;
 }
 .as-card-heading h2 { margin: 1px 0 5px; font-size: 16px; letter-spacing: -.3px; }
 .as-card-heading p { margin: 0; color: #7b8982; font-size: 12px; line-height: 1.5; }
@@ -28,20 +28,20 @@
 }
 .as-readonly-field > span { color: #74837b; }
 .as-readonly-field strong { text-align: right; overflow-wrap: anywhere; }
-.as-role { display: inline-block; padding: 4px 9px; border-radius: 20px; color: #087f68; background: #e6f6ef; font-size: 11px; }
+.as-role { display: inline-block; padding: 4px 9px; border-radius: 20px; color: var(--nd-accent); background: var(--nd-accent-soft); font-size: 11px; }
 .as-subsection { border-top: 1px solid #e9efeb; margin-top: 18px; padding-top: 17px; }
 .as-subsection h3 { font-size: 14px; margin: 0 0 5px; }
-.as-subsection > p { color: #788780; font-size: 12px; line-height: 1.5; margin: 0 0 13px; }
+.as-subsection > p { color: var(--nd-muted); font-size: 12px; line-height: 1.5; margin: 0 0 13px; }
 .as-password-form { display: grid; gap: 11px; }
 .as-password-form label, .as-field {
   display: grid; gap: 7px; color: #41554b; font-size: 12px; font-weight: 650; min-width: 0;
 }
 .as-password-form input, .as-field input, .as-field select {
   box-sizing: border-box; width: 100%; border: 1px solid #dce6e0; border-radius: 9px;
-  padding: 11px 12px; background: #fff; color: #20332c; font: inherit; font-weight: 400;
+  padding: 11px 12px; background: var(--nd-surface); color: var(--nd-text); font: inherit; font-weight: 400;
 }
 .as-password-form input:focus, .as-field input:focus, .as-field select:focus {
-  outline: 2px solid #82d7bb; outline-offset: 1px; border-color: #087f68;
+  outline: 2px solid #82d7bb; outline-offset: 1px; border-color: var(--nd-accent);
 }
 .as-toggle-row {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
@@ -49,8 +49,8 @@
 }
 .as-toggle-copy { display: grid; gap: 5px; }
 .as-toggle-copy strong { font-size: 12px; font-weight: 700; }
-.as-toggle-copy small { color: #788780; font-size: 11px; line-height: 1.5; }
-.as-toggle-row input { accent-color: #087f68; flex: 0 0 17px; width: 17px; height: 17px; }
+.as-toggle-copy small { color: var(--nd-muted); font-size: 11px; line-height: 1.5; }
+.as-toggle-row input { accent-color: var(--nd-accent); flex: 0 0 17px; width: 17px; height: 17px; }
 .as-note {
   margin: 12px 0 0; background: #f5f8f6; border-radius: 9px; padding: 11px;
   color: #718178; font-size: 11px; line-height: 1.6;
@@ -62,16 +62,16 @@
 .as-privacy-list strong { font-size: 12px; }
 .as-privacy-list p { margin: 7px 0 0; color: #74837b; font-size: 11px; line-height: 1.65; }
 .as-save-bar {
-  margin: 16px 0 26px; border: 1px solid #e2ebe6; border-radius: 12px;
-  background: #fff; padding: 13px 16px; display: flex; align-items: center;
+  margin: 16px 0 26px; border: 1px solid var(--nd-border); border-radius: 12px;
+  background: var(--nd-surface); padding: 13px 16px; display: flex; align-items: center;
   justify-content: space-between; gap: 14px; flex-wrap: wrap;
 }
 .as-save-bar > span { color: #74837b; font-size: 11px; }
 .as-primary-button, .as-secondary-button {
   border: 0; border-radius: 9px; padding: 11px 16px; cursor: pointer;
-  background: #087f68; color: white; font-size: 12px; font-weight: 750;
+  background: var(--nd-accent); color: white; font-size: 12px; font-weight: 750;
 }
-.as-secondary-button { background: #e6f6ef; color: #087f68; justify-self: start; }
+.as-secondary-button { background: var(--nd-accent-soft); color: var(--nd-accent); justify-self: start; }
 .as-primary-button:disabled, .as-secondary-button:disabled { opacity: .6; cursor: wait; }
 .as-alert { border-radius: 9px; padding: 11px 13px; margin: 0 0 14px; font-size: 12px; line-height: 1.5; }
 .as-alert-error { background: #fff1f0; color: #9d302b; border: 1px solid #f3d0cd; }
@@ -150,12 +150,12 @@
 
 /* Katiba News dashboard palette alignment */
 .as-settings {
-  color: #20332c;
+  color: var(--nd-text);
   background: transparent;
 }
 
 .as-settings .as-intro {
-  background: #ffffff;
+  background: var(--nd-surface);
   border: 1px solid #e5ece8;
   border-radius: 16px;
   padding: 24px;
@@ -163,7 +163,7 @@
 }
 
 .as-settings .as-eyebrow {
-  color: #087f68;
+  color: var(--nd-accent);
 }
 
 .as-settings .as-intro h1,
@@ -171,7 +171,7 @@
 .as-settings .as-subsection h3,
 .as-settings .as-toggle-copy strong,
 .as-settings .as-privacy-list strong {
-  color: #20332c;
+  color: var(--nd-text);
 }
 
 .as-settings .as-intro p,
@@ -182,25 +182,25 @@
 .as-settings .as-save-bar > span,
 .as-settings .as-privacy-list p,
 .as-settings .as-field small {
-  color: #788780;
+  color: var(--nd-muted);
 }
 
 .as-settings .as-card,
 .as-settings .as-save-bar {
-  background: #ffffff;
-  color: #20332c;
-  border-color: #e2ebe6;
+  background: var(--nd-surface);
+  color: var(--nd-text);
+  border-color: var(--nd-border);
   box-shadow: 0 2px 9px rgba(28, 54, 43, .025);
 }
 
 .as-settings .as-icon {
-  background: #e6f6ef;
-  color: #087f68;
+  background: var(--nd-accent-soft);
+  color: var(--nd-accent);
 }
 
 .as-settings .as-role {
-  background: #e6f6ef;
-  color: #087f68;
+  background: var(--nd-accent-soft);
+  color: var(--nd-accent);
 }
 
 .as-settings .as-readonly-field,
@@ -217,8 +217,8 @@
 .as-settings .as-field input,
 .as-settings .as-field select,
 .as-settings .as-password-form input {
-  background: #ffffff;
-  color: #20332c;
+  background: var(--nd-surface);
+  color: var(--nd-text);
   border-color: #dce6e0;
 }
 
@@ -232,7 +232,7 @@
 .as-settings .as-password-form input:focus {
   outline: 2px solid #82d7bb;
   outline-offset: 1px;
-  border-color: #087f68;
+  border-color: var(--nd-accent);
 }
 
 .as-settings .as-note,
@@ -243,21 +243,21 @@
 }
 
 .as-settings .as-primary-button {
-  background: #087f68;
-  color: #ffffff;
+  background: var(--nd-accent);
+  color: var(--nd-surface);
 }
 
 .as-settings .as-secondary-button {
-  background: #e6f6ef;
-  color: #087f68;
+  background: var(--nd-accent-soft);
+  color: var(--nd-accent);
 }
 
 .as-settings .as-toggle-row input {
-  accent-color: #087f68;
+  accent-color: var(--nd-accent);
 }
 
 .as-settings :focus-visible {
-  outline-color: #087f68;
+  outline-color: var(--nd-accent);
 }
 
 .as-settings[data-katiba-theme="dark"] .as-intro {
@@ -286,15 +286,15 @@
 /* System theme follows the existing dashboard's light palette. */
 @media (prefers-color-scheme: dark) {
   .as-settings[data-katiba-theme="system"] {
-    color: #20332c;
+    color: var(--nd-text);
   }
 
   .as-settings[data-katiba-theme="system"] .as-intro,
   .as-settings[data-katiba-theme="system"] .as-card,
   .as-settings[data-katiba-theme="system"] .as-save-bar {
-    background: #ffffff;
-    color: #20332c;
-    border-color: #e2ebe6;
+    background: var(--nd-surface);
+    color: var(--nd-text);
+    border-color: var(--nd-border);
   }
 
   .as-settings[data-katiba-theme="system"] .as-intro h1,
@@ -302,7 +302,7 @@
   .as-settings[data-katiba-theme="system"] .as-subsection h3,
   .as-settings[data-katiba-theme="system"] .as-toggle-copy strong,
   .as-settings[data-katiba-theme="system"] .as-privacy-list strong {
-    color: #20332c;
+    color: var(--nd-text);
   }
 
   .as-settings[data-katiba-theme="system"] .as-intro p,
@@ -312,7 +312,7 @@
   .as-settings[data-katiba-theme="system"] .as-toggle-copy small,
   .as-settings[data-katiba-theme="system"] .as-save-bar > span,
   .as-settings[data-katiba-theme="system"] .as-privacy-list p {
-    color: #788780;
+    color: var(--nd-muted);
   }
 
   .as-settings[data-katiba-theme="system"] .as-field,
@@ -323,8 +323,8 @@
   .as-settings[data-katiba-theme="system"] .as-field input,
   .as-settings[data-katiba-theme="system"] .as-field select,
   .as-settings[data-katiba-theme="system"] .as-password-form input {
-    background: #ffffff;
-    color: #20332c;
+    background: var(--nd-surface);
+    color: var(--nd-text);
     border-color: #dce6e0;
   }
 
@@ -335,3 +335,13 @@
     color: #52665c;
   }
 }
+
+/* Appearance is controlled by the shared workspace theme, including Settings. */
+.nd-shell.author-workspace .as-settings { color: var(--nd-text); }
+.nd-shell.author-workspace .as-settings :is(.as-intro, .as-card, .as-save-bar) { background: var(--nd-surface); color: var(--nd-text); border-color: var(--nd-border); }
+.nd-shell.author-workspace .as-settings :is(h1, h2, h3, strong, .as-field, .as-password-form label) { color: var(--nd-text); }
+.nd-shell.author-workspace .as-settings :is(p, small, .as-readonly-field > span, .as-save-bar > span) { color: var(--nd-muted); }
+.nd-shell.author-workspace .as-settings :is(input, select, .as-password-form input) { background: var(--nd-surface); color: var(--nd-text); border-color: var(--nd-border); }
+.nd-shell.author-workspace .as-settings :is(.as-note, .as-privacy-list > div) { background: var(--nd-soft); color: var(--nd-muted); border-color: var(--nd-border); }
+.nd-shell.author-workspace .as-settings :is(.as-readonly-field, .as-subsection, .as-toggle-row) { border-color: var(--nd-border); }
+.nd-shell.author-workspace .as-settings .as-primary-button { background: #00896c; color: white; }

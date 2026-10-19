@@ -1,7 +1,8 @@
+import { sessionFetch } from '../../../auth/session'
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-type BlogStatus = 'draft' | 'under_review' | 'published';
+type BlogStatus = 'draft' | 'under_review' | 'approved' | 'rejected' | 'published';
 
 type BlogComment = {
   id: number;
@@ -23,6 +24,7 @@ type BlogItem = {
   comments?: BlogComment[];
   created_at: string;
   status: BlogStatus;
+  feedback?: string;
 };
 
 type BlogViewProps = {
@@ -115,7 +117,7 @@ function errorMessage(data: unknown, fallback: string): string {
 }
 
 function normalizeStatus(value: unknown): BlogStatus {
-  if (value === 'draft' || value === 'under_review' || value === 'published') {
+  if (value === 'draft' || value === 'under_review' || value === 'published' || value === 'approved' || value === 'rejected') {
     return value;
   }
 
@@ -148,6 +150,7 @@ function normalizePost(value: unknown): BlogItem | null {
     comments: Array.isArray(post.comments) ? post.comments : [],
     created_at: post.created_at || '',
     status: normalizeStatus(post.status),
+    feedback: post.feedback,
   };
 }
 
@@ -187,6 +190,8 @@ function commentName(comment: BlogComment): string {
 
 function statusLabel(status: BlogStatus): string {
   switch (status) {
+    case 'approved': return 'Approved';
+    case 'rejected': return 'Needs changes';
     case 'draft':
       return 'Draft';
     case 'under_review':
@@ -198,6 +203,8 @@ function statusLabel(status: BlogStatus): string {
 
 function statusClasses(status: BlogStatus): string {
   switch (status) {
+    case 'approved': return 'bg-emerald-50 text-emerald-700';
+    case 'rejected': return 'bg-red-50 text-red-700';
     case 'draft':
       return 'border-slate-200 bg-slate-100 text-slate-700';
     case 'under_review':
@@ -225,6 +232,7 @@ export function BlogView({
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [editingPost, setEditingPost] = useState<BlogItem | null>(null);
   const [newPostStatus, setNewPostStatus] = useState<
     'draft' | 'under_review'
   >('draft');
@@ -250,7 +258,7 @@ export function BlogView({
     setError('');
 
     try {
-      const response = await fetch(`${API_BASE}?page_size=100`, {
+      const response = await sessionFetch(`${API_BASE}?mine=true&page_size=100`, {
         headers: headers(),
       });
 
@@ -278,7 +286,9 @@ export function BlogView({
   }, []);
 
   useEffect(() => {
-    void loadPosts(true);
+    let active = true;
+    queueMicrotask(() => { if (active) void loadPosts(true); });
+    return () => { active = false; };
   }, [loadPosts]);
 
   const counts = useMemo(
@@ -362,8 +372,8 @@ export function BlogView({
     setSaving(true);
 
     try {
-      const response = await fetch(API_BASE, {
-        method: 'POST',
+      const response = await sessionFetch(editingPost ? `${API_BASE}${encodeURIComponent(editingPost.slug)}/` : API_BASE, {
+        method: editingPost ? 'PATCH' : 'POST',
         headers: headers(true),
         body: JSON.stringify({
           title: cleanTitle,
@@ -381,6 +391,7 @@ export function BlogView({
       setTitle('');
       setContent('');
       setNewPostStatus('draft');
+      setEditingPost(null);
 
       setSuccess(
         status === 'draft'
@@ -407,7 +418,7 @@ export function BlogView({
     setSavingStatusId(post.id);
 
     try {
-      const response = await fetch(
+      const response = await sessionFetch(
         `${API_BASE}${encodeURIComponent(post.slug)}/`,
         {
           method: 'PATCH',
@@ -456,7 +467,7 @@ export function BlogView({
     setLikingId(post.id);
 
     try {
-      const response = await fetch(
+      const response = await sessionFetch(
         `${API_BASE}${encodeURIComponent(post.slug)}/like/`,
         { method: 'POST', headers: headers() },
       );
@@ -496,7 +507,7 @@ export function BlogView({
     setCommentingId(post.id);
 
     try {
-      const response = await fetch(
+      const response = await sessionFetch(
         `${API_BASE}${encodeURIComponent(post.slug)}/comments/`,
         {
           method: 'POST',
@@ -838,6 +849,7 @@ export function BlogView({
                                 Manage:
                               </span>
 
+                              {(post.status === 'draft' || post.status === 'rejected') && <><button onClick={() => { setEditingPost(post); setTitle(post.title); setContent(post.content); setNewPostStatus('draft'); document.getElementById('blog-composer')?.scrollIntoView({ behavior: 'smooth' }) }}>Edit draft</button><button className="text-red-700" disabled={savingStatusId === post.id} onClick={async () => { if (!window.confirm(`Delete draft “${post.title}”?`)) return; setSavingStatusId(post.id); setError(''); try { const response = await sessionFetch(`${API_BASE}${encodeURIComponent(post.slug)}/`, { method: 'DELETE' }); if (!response.ok) throw new Error('Could not delete draft.'); await loadPosts() } catch (err) { setError(String(err)) } finally { setSavingStatusId(null) } }}>Delete draft</button></>}
                               {post.status === 'draft' && (
                                 <button
                                   type="button"
@@ -853,48 +865,11 @@ export function BlogView({
                                 </button>
                               )}
 
-                              {post.status === 'under_review' && (
-                                <>
-                                  <button
-                                    type="button"
-                                    disabled={savingStatusId === post.id}
-                                    onClick={() =>
-                                      void changePostStatus(post, 'published')
-                                    }
-                                    className="rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                                  >
-                                    {savingStatusId === post.id
-                                      ? 'Saving…'
-                                      : 'Publish'}
-                                  </button>
+                              {post.status === 'under_review' && <span className="text-xs text-slate-500">Awaiting editor review</span>}
+                              {post.status === 'approved' && <span className="text-xs text-slate-500">Approved · awaiting publication</span>}
+                              {post.status === 'rejected' && <button disabled={savingStatusId === post.id} onClick={() => void changePostStatus(post, 'draft')}>Return to draft</button>}
+                              {post.feedback && <p className="text-sm text-slate-600">Editor feedback: {post.feedback}</p>}
 
-                                  <button
-                                    type="button"
-                                    disabled={savingStatusId === post.id}
-                                    onClick={() =>
-                                      void changePostStatus(post, 'draft')
-                                    }
-                                    className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-                                  >
-                                    Return to draft
-                                  </button>
-                                </>
-                              )}
-
-                              {post.status === 'published' && (
-                                <button
-                                  type="button"
-                                  disabled={savingStatusId === post.id}
-                                  onClick={() =>
-                                    void changePostStatus(post, 'draft')
-                                  }
-                                  className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-                                >
-                                  {savingStatusId === post.id
-                                    ? 'Saving…'
-                                    : 'Move to draft'}
-                                </button>
-                              )}
                             </div>
                           )}
 
@@ -1040,12 +1015,12 @@ export function BlogView({
                   Create a post
                 </h2>
                 <p className="mt-1 text-sm leading-5 text-slate-500">
-                  Save a draft or submit your post for review.
+                  {editingPost ? `Editing: ${editingPost.title}` : 'Save a draft or submit your post for review.'}
                 </p>
               </div>
 
               <form
-                onSubmit={(event) => void savePost(event, newPostStatus)}
+                id="blog-composer" onSubmit={(event) => void savePost(event, newPostStatus)}
                 className="space-y-3 p-4"
               >
                 <label className="block">

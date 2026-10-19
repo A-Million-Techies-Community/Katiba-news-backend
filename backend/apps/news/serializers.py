@@ -98,10 +98,10 @@ class StorySerializer(serializers.ModelSerializer):
         model = Story
         fields = ('id', 'title', 'content', 'category', 'category_name', 'author',
                   'author_username', 'status', 'feedback', 'reviewer', 'submitted_at',
-                  'reviewed_at', 'created_at', 'updated_at', 'featured_image',
+                  'reviewed_at', 'published_at', 'created_at', 'updated_at', 'featured_image',
                   'featured_image_url', 'featured_image_alt', 'featured_image_caption')
         read_only_fields = ('author', 'status', 'feedback', 'reviewer', 'submitted_at',
-                            'reviewed_at', 'created_at', 'updated_at')
+                            'reviewed_at', 'published_at', 'created_at', 'updated_at')
 
     def validate_content(self, value):
         """Keep supported formatting while stripping scripts, handlers, styles, and unsafe links."""
@@ -160,3 +160,22 @@ class StorySerializer(serializers.ModelSerializer):
 class ReviewSerializer(serializers.Serializer):
     """Validate feedback text; the review view requires it for rejection."""
     feedback = serializers.CharField(required=False, allow_blank=True, max_length=10000)
+
+
+class PublicStorySerializer(serializers.ModelSerializer):
+    author_username = serializers.CharField(source='author.username', read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    featured_image_url = serializers.SerializerMethodField()
+    content = serializers.SerializerMethodField()
+
+    def get_featured_image_url(self, story):
+        return story.featured_image.api_url if story.featured_image else None
+
+    def get_content(self, story):
+        # Sanitize again on public output to cover content predating validation.
+        return bleach.clean(story.content, tags=['p', 'br', 'strong', 'em', 'u', 's', 'h2', 'h3', 'ul', 'ol', 'li', 'blockquote', 'a', 'img', 'figure', 'figcaption', 'hr'],
+            attributes={'a': ['href', 'title'], 'img': ['src', 'alt'], '*': []}, protocols=['http', 'https', 'mailto'], strip=True)
+
+    class Meta:
+        model = Story
+        fields = ['id', 'title', 'content', 'author_username', 'category_name', 'published_at', 'featured_image_url', 'featured_image_alt', 'featured_image_caption']

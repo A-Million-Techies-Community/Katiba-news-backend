@@ -3,7 +3,7 @@ import NewsImage from './NewsImage'
 
 type Story = { id: number; title: string; content: string; category: number; category_name: string; author_username: string; status: string; updated_at: string; featured_image_url: string | null; featured_image_alt: string }
 type Props = { stories: Story[]; categories: { id: number; name: string }[]; mode: 'writer' | 'editor'; filter: string; onFilter: (value: string) => void; search: string; onSearch: (value: string) => void; onOpen: (story: Story) => void; onCreate: () => void; disabled: boolean }
-const labels: Record<string, string> = { draft: 'Draft', submitted: 'In review', approved: 'Approved', rejected: 'Needs changes' }
+const labels: Record<string, string> = { draft: 'Draft', submitted: 'In review', approved: 'Approved', rejected: 'Needs changes', published: 'Published' }
 export default function NewsContentManager({ stories, categories, mode, filter, onFilter, search, onSearch, onOpen, onCreate, disabled }: Props) {
   const [category, setCategory] = useState('all')
   const [sort, setSort] = useState('latest')
