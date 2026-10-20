@@ -9,7 +9,15 @@ class ArticleSerializer(ContentSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Article
         # Explicitly targets base data schema fields needed by frontend requests
-        fields = ['id', 'title', 'slug', 'content', 'status', 'author', 'author_username', 'created_at', 'updated_at', 'feedback', 'reviewer', 'reviewed_at', 'published_at']
+        # 📍 ADDED 'featured_image' here so the API accepts the uploaded file
+        fields = [
+            'id', 'title', 'slug', 'content', 'featured_image', 
+            'status', 'author', 'author_username', 'created_at', 
+            'updated_at', 'feedback', 'reviewer', 'reviewed_at', 'published_at'
+        ]
         
         # Added 'author' here so Django automatically assigns it from the logged-in session token
-        read_only_fields = ['id', 'slug', 'author', 'created_at', 'updated_at', 'reviewer', 'reviewed_at', 'published_at']
+        read_only_fields = [
+            'id', 'slug', 'author', 'created_at', 'updated_at', 
+            'reviewer', 'reviewed_at', 'published_at'
+        ]

@@ -49,7 +49,13 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
+
 STATIC_URL = 'static/'
+
+# Added Media settings for handling image uploads
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 REST_FRAMEWORK = {
@@ -64,8 +70,7 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'CHECK_REVOKE_TOKEN': True,
-        'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
-
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=2),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=14),
 }
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
