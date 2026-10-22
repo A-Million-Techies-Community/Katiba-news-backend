@@ -647,7 +647,7 @@ export const ArticleEditor: React.FC<ArticleEditorProps> = ({ onBackToDashboard 
   );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 selection:bg-blue-100 font-sans pb-24">
+    <div className="article-workspace min-h-screen bg-[#F8FAFC] text-slate-900 selection:bg-blue-100 font-sans pb-24">
       {/* Header */}
       <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">

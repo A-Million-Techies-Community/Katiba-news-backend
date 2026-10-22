@@ -1,9 +1,12 @@
 import { DashboardLayout, ThemeToggle } from '../../../dashboard'
-import { useEffect, useState } from 'react'
-import type { FormEvent } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import type { ComponentProps, FormEvent } from 'react'
 import { api, all } from '../api'
 import type { UploadedImage } from '../api'
-import RichTextEditor from '../components/RichTextEditor'
+const LazyRichTextEditor = lazy(() => import('../components/RichTextEditor'))
+function RichTextEditor(props: ComponentProps<typeof LazyRichTextEditor>) {
+  return <Suspense fallback={<p role="status">Loading editor…</p>}><LazyRichTextEditor {...props} /></Suspense>
+}
 import FeaturedImage from '../components/FeaturedImage'
 import NewsImage from '../components/NewsImage'
 import NewsContentManager from '../components/NewsContentManager'
@@ -294,9 +297,9 @@ export default function NewsDashboard() {
       { id: 'articles', label: '▤ Articles', href: '/author/dashboard?tab=articles' },
       { id: 'blogs', label: '✎ Blogs', href: '/author/dashboard?tab=blogs' },
     ] : []),
-    { id: 'overview', label: mode === 'writer' ? '▧ News' : '⌂ Dashboard' },
-    { id: 'stories', label: mode === 'writer' ? 'My stories' : 'Submission queue' },
-    { id: 'categories', label: 'Categories' },
+    { id: 'overview', label: mode === 'writer' ? '▧ News Author' : '⌂ Dashboard' },
+    { id: 'stories', label: mode === 'writer' ? 'My stories' : 'Submission queue', parentId: mode === 'writer' ? 'overview' : undefined },
+    { id: 'categories', label: 'Categories', parentId: mode === 'writer' ? 'overview' : undefined },
     ...(mode === 'editor' ? [{ id: 'content', label: '▤ Articles & blogs' }, { id: 'comments', label: '☏ Comments' }, { id: 'media', label: '▣ Media library' }] : []),
     ...(mode === 'writer' ? [
       { id: 'analytics', label: '▥ Analytics', href: '/author/dashboard?tab=analytics' },

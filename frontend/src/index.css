@@ -27,3 +27,8 @@ button,
 a {
   -webkit-tap-highlight-color: transparent;
 }
+
+html[data-newsroom-theme] { --workspace-loading-bg: #f5f8fc; --workspace-loading-text: #20353e; background: var(--workspace-loading-bg); color: var(--workspace-loading-text); }
+html[data-newsroom-theme="dark"] { --workspace-loading-bg: #0d171f; --workspace-loading-text: #e0edf1; color-scheme: dark; }
+html[data-newsroom-theme] body, html[data-newsroom-theme] #root { min-height: 100vh; background: var(--workspace-loading-bg); color: var(--workspace-loading-text); }
+html[data-newsroom-theme] .workspace-loading { min-height: 100vh; margin: 0; display: grid; place-items: center; background: var(--workspace-loading-bg); color: var(--workspace-loading-text); }

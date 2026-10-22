@@ -81,5 +81,5 @@ export function WorkspaceGate({ role, children }: { role: WorkspaceAccount['role
     return () => { active = false }
   }, [role])
   if (error) return <main className="editor-entry"><section className="editor-entry-card"><h1>Workspace unavailable</h1><p role="alert">{error}</p><a href="/workspace">Return to workspace sign in</a></section></main>
-  return ready ? children : <main className="editor-entry"><p role="status">Checking workspace access…</p></main>
+  return ready ? children : <main className="workspace-loading"><p role="status">Checking workspace access…</p></main>
 }

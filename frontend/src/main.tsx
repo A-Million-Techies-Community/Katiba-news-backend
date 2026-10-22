@@ -1,12 +1,13 @@
-import { StrictMode } from 'react'
+import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import App from './App.tsx'
+import './features/dashboard/writer-theme.css'
+const App = lazy(() => import('./App.tsx'))
 import NewsDashboardPage from './features/news/pages/NewsDashboardPage'
-import Recovery from './auth/Recovery'
-import StaffApplication from './auth/StaffApplication'
-import PublicLibrary from './features/public/PublicLibrary'
-import Administrator from './features/admin/Administrator'
+const Recovery = lazy(() => import('./auth/Recovery'))
+const StaffApplication = lazy(() => import('./auth/StaffApplication'))
+const PublicLibrary = lazy(() => import('./features/public/PublicLibrary'))
+const Administrator = lazy(() => import('./features/admin/Administrator'))
 import Workspace, { StaffEntry, WorkspaceGate } from './auth/Workspace'
 
 let path = window.location.pathname.replace(/\/+$/, '') || '/'
@@ -36,4 +37,4 @@ else if (path === '/read') page = <PublicLibrary />
 else if (editorRoute) page = <WorkspaceGate role="Editor"><NewsDashboardPage /></WorkspaceGate>
 else if (authorRoute) page = <WorkspaceGate role="Author">{path.startsWith('/news/dashboard') ? <NewsDashboardPage /> : <App />}</WorkspaceGate>
 else page = <App />
-createRoot(document.getElementById('root')!).render(<StrictMode>{page}</StrictMode>)
+createRoot(document.getElementById('root')!).render(<StrictMode><Suspense fallback={<main className="workspace-loading" role="status">Loading…</main>}>{page}</Suspense></StrictMode>)
