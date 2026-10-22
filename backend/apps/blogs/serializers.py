@@ -5,10 +5,11 @@ from apps.content.workflow import ContentSerializerMixin
 class CommentSerializer(serializers.ModelSerializer):
     # Resolves client profile identifiers down to true username strings
     user_username = serializers.CharField(source='user.username', read_only=True)
+    post_title = serializers.CharField(source='post.title', read_only=True)
 
     class Meta:
         model = Comment
-        fields = ['id', 'post', 'user', 'user_username', 'content', 'created_at']
+        fields = ['id', 'post', 'user', 'user_username', 'post_title', 'content', 'created_at']
         read_only_fields = ['id', 'post', 'user', 'created_at']
 
 class BlogPostSerializer(ContentSerializerMixin, serializers.ModelSerializer):

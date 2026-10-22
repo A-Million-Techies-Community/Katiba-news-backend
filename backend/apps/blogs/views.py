@@ -12,6 +12,9 @@ from .serializers import BlogPostSerializer, CommentSerializer
 class BlogPostListCreateAPIView(ContentListCreate):
     serializer_class = BlogPostSerializer
 
+    def get_queryset(self):
+        return super().get_queryset().prefetch_related('comments__user', 'likes')
+
 
 class BlogPostDetailAPIView(ContentDetail):
     serializer_class = BlogPostSerializer

@@ -1,9 +1,13 @@
 import { signOut } from '../../auth/session'
+import { NavigationIcon } from '../../dashboard/components/NavigationIcon'
+import { ThemeToggle } from '../../dashboard/components/ThemeToggle'
 import AuthorSettings from './AuthorSettings'
+import { useDashboardTheme } from '../../dashboard/hooks/useDashboardTheme'
+import './writer-theme.css'
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { ArticleEditor } from '../articles/components/ArticleEditor'
-import { BlogView } from '../blogs/components/BlogView'
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+const ArticleEditor = lazy(() => import('../articles/components/ArticleEditor').then(module => ({ default: module.ArticleEditor })))
+const BlogView = lazy(() => import('../blogs/components/BlogView').then(module => ({ default: module.BlogView })))
 
 type Tab =
   | 'dashboard'
@@ -100,7 +104,7 @@ const ACCOUNT_ENDPOINT = '/api/users/me/'
 const ARTICLES_ENDPOINT = '/api/articles/?mine=true&page_size=100'
 const BLOGS_ENDPOINT = '/api/blogs/?mine=true&page_size=100'
 const MEDIA_ENDPOINT = '/api/media/?mine=true&page_size=50'
-const COMMENTS_ENDPOINT = '/api/comments/?mine=true&page_size=50'
+const COMMENTS_ENDPOINT = '/api/blogs/moderation/comments/'
 const DASHBOARD_PATH = '/author/dashboard'
 
 const navItems: {
@@ -204,6 +208,13 @@ function getSession(): Session | null {
 }
 
 function getTabFromUrl(): Tab {
+  const path = window.location.pathname.replace(/\/+$/, '')
+  const pathTab = path.startsWith(`${DASHBOARD_PATH}/`)
+    ? path.slice(DASHBOARD_PATH.length + 1)
+    : ''
+  if (pathTab === 'article') return 'articles'
+  if (validTabs.has(pathTab as Tab)) return pathTab as Tab
+
   const requested = new URLSearchParams(window.location.search).get('tab')
   return requested && validTabs.has(requested as Tab)
     ? (requested as Tab)
@@ -644,8 +655,8 @@ function CommentsModeration({ authenticatedFetch }: { authenticatedFetch: any })
         return res.json()
       })
       .then((data: any) => setComments(extractList(data)))
-      .catch(() => {
-        setError('Unable to load comments from the database at this time.')
+      .catch((error: unknown) => {
+        setError(error instanceof Error ? `Could not load comments: ${error.message}` : 'Could not load comments. Please try again.')
         setComments([])
       })
       .finally(() => setLoading(false))
@@ -653,15 +664,15 @@ function CommentsModeration({ authenticatedFetch }: { authenticatedFetch: any })
 
   return (
     <section className="ad-panel">
-      <PanelHeading eyebrow="AUDIENCE ENGAGEMENT" title="Comments Moderation" subtitle="Review and moderate reader conversations fetched from your database." />
+      <PanelHeading eyebrow="AUDIENCE ENGAGEMENT" title="Comments Moderation" subtitle="Read comments on your blog posts." />
       
       {error && <div className="ad-alert ad-alert-error" style={{marginTop: '15px'}}><p>{error}</p></div>}
       
       {loading ? (
-        <div className="ad-inline-loading">Loading database comments...</div>
+        <div className="ad-inline-loading">Loading comments…</div>
       ) : comments.length === 0 ? (
          <div className="ad-empty compact" style={{marginTop: '20px'}}>
-           <p>No comments found in the database yet.</p>
+           <p>No comments on your blog posts yet.</p>
          </div>
       ) : (
         <div className="ad-table-wrap">
@@ -669,31 +680,18 @@ function CommentsModeration({ authenticatedFetch }: { authenticatedFetch: any })
             <thead>
               <tr>
                 <th>Author & Comment</th>
-                <th>Target Article</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th>Blog post</th>
               </tr>
             </thead>
             <tbody>
               {comments.map(c => (
                 <tr key={c.id}>
                   <td style={{ maxWidth: '300px' }}>
-                    <strong>{c.author || 'Anonymous'}</strong>
+                    <strong>{c.user_username || 'Anonymous'}</strong>
                     <p style={{ marginTop: '4px', color: 'var(--ink)' }}>"{c.text || c.content}"</p>
                     <span style={{ fontSize: '9px', color: 'var(--muted)', display: 'block', marginTop: '6px' }}>{formatDate(c.created_at || c.date)}</span>
                   </td>
-                  <td><strong style={{color: 'var(--muted)', fontSize: '11px'}}>{c.target || c.article_title || 'Unknown Article'}</strong></td>
-                  <td>
-                    <span className={`ad-status ad-status-${c.status === 'approved' ? 'published' : c.status === 'rejected' ? 'rejected' : 'pending'}`}>
-                      {(c.status || 'pending').charAt(0).toUpperCase() + (c.status || 'pending').slice(1)}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="ad-button ad-button-light" style={{ padding: '6px 10px', fontSize: '10px' }}>Approve</button>
-                      <button className="ad-button ad-button-light" style={{ padding: '6px 10px', fontSize: '10px', color: '#dc6464' }}>Reject</button>
-                    </div>
-                  </td>
+                  <td><strong style={{color: 'var(--muted)', fontSize: '11px'}}>{c.post_title || `Blog post #${c.post}`}</strong></td>
                 </tr>
               ))}
             </tbody>
@@ -705,7 +703,7 @@ function CommentsModeration({ authenticatedFetch }: { authenticatedFetch: any })
 }
 
 function AuthorDashboard() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const { theme, toggleTheme } = useDashboardTheme()
   const [tab, setTab] = useState<Tab>(getTabFromUrl)
   const [session, setSession] = useState<Session | null>(getSession)
   const [account, setAccount] = useState<Record<string, unknown> | null>(null)
@@ -1465,7 +1463,7 @@ function AuthorDashboard() {
             <div><span className="ad-eyebrow">EDITORIAL WORKSPACE</span><h1>Article editor</h1><p>Draft, revise, and manage SEO metadata for your articles.</p></div>
             <button className="ad-button ad-button-light" onClick={() => changeTab('dashboard')}>← Dashboard</button>
           </div>
-          <ArticleEditor />
+          <Suspense fallback={<p className="ad-inline-loading" role="status">Loading tools…</p>}><ArticleEditor /></Suspense>
         </section>
       )
     }
@@ -1473,7 +1471,7 @@ function AuthorDashboard() {
       return (
         <section className="ad-panel">
           <div className="ad-page-heading"><div><span className="ad-eyebrow">COMMUNITY WRITING</span><h1>Blogs feed</h1><p>Explore blog content connected to your account.</p></div></div>
-          <BlogView />
+          <Suspense fallback={<p className="ad-inline-loading" role="status">Loading tools…</p>}><BlogView /></Suspense>
         </section>
       )
     }
@@ -1741,6 +1739,17 @@ function AuthorDashboard() {
         <nav className="ad-nav" aria-label="Author dashboard navigation">
           {navItems.map((item, index) => (
             <React.Fragment key={item.id}>
+              {item.id === 'articles' && (
+                <a
+                  className="ad-nav-button"
+                  href="/news/dashboard/writer"
+                  title="Create and manage news stories"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <span className="ad-nav-icon" aria-hidden="true"><NavigationIcon id="news" /></span>
+                  <span>News Author</span>
+                </a>
+              )}
               {index === 7 && <div className="ad-nav-separator" />}
               <button
                 type="button"
@@ -1749,13 +1758,13 @@ function AuthorDashboard() {
                 aria-current={tab === item.id ? 'page' : undefined}
                 title={item.description}
               >
-                <span className="ad-nav-icon" aria-hidden="true">{item.icon}</span>
+                <span className="ad-nav-icon" aria-hidden="true"><NavigationIcon id={item.id} /></span>
                 <span>{item.label}</span>
               </button>
             </React.Fragment>
           ))}
           <button type="button" className="ad-nav-button ad-logout" onClick={logout}>
-            <span className="ad-nav-icon" aria-hidden="true">↪</span>
+            <span className="ad-nav-icon" aria-hidden="true"><NavigationIcon id="logout" /></span>
             <span>Logout</span>
           </button>
         </nav>
@@ -1777,13 +1786,7 @@ function AuthorDashboard() {
             <span className="ad-search-icon" aria-hidden="true">⌕</span>
           </label>
 
-          <button 
-            className="ad-theme-toggle" 
-            onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-            title="Toggle theme"
-          >
-            {theme === 'light' ? '🌒 Dark' : '☀️ Light'}
-          </button>
+          <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
 
           <div className="ad-user-chip">
             <div className="ad-avatar">{initials || 'A'}</div>

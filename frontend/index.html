@@ -7,6 +7,19 @@
     <meta name="theme-color" content="#0d1c21" />
     <meta name="application-name" content="Katiba News" />
     <title>Katiba News</title>
+    <script>
+      // Paint protected workspaces in their saved theme before React or CSS loads.
+      if (/^\/(author|news\/dashboard|features\/dashboard)(\/|$)/.test(location.pathname)) {
+        let theme;
+        try { theme = localStorage.getItem('katibaNewsroomTheme'); } catch {}
+        if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.newsroomTheme = theme;
+      }
+    </script>
+    <style>
+      html[data-newsroom-theme="dark"] { background: #0d171f; color: #e0edf1; color-scheme: dark; }
+      html[data-newsroom-theme="light"] { background: #f5f8fc; color: #20353e; color-scheme: light; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

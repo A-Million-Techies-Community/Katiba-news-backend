@@ -27,7 +27,6 @@ export function useDashboardTheme() {
   useEffect(() => {
     document.documentElement.dataset.newsroomTheme = theme
     try { localStorage.setItem('katibaNewsroomTheme', theme) } catch { /* Storage is optional. */ }
-    return () => { delete document.documentElement.dataset.newsroomTheme }
   }, [theme])
   return { theme, toggleTheme: () => setTheme(current => current === 'light' ? 'dark' : 'light') }
 }

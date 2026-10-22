@@ -2,10 +2,10 @@ import { sessionFetch } from './auth/session'
 import HomepageStories from './features/public/HomepageStories'
 import PublicLayout from './features/public/PublicLayout'
 
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import './App.css'
-import { AuthorDashboard } from './features/dashboard/AuthorDashboard'
+const AuthorDashboard = lazy(() => import('./features/dashboard/AuthorDashboard'))
 
 type Role = 'Author'
 type View = 'home' | 'onboarding' | 'dashboard'
@@ -563,7 +563,7 @@ function App() {
       )
     }
 
-    return <AuthorDashboard />
+    return <Suspense fallback={<main className="workspace-loading" role="status">Loading workspace…</main>}><AuthorDashboard /></Suspense>
   }
 
   /* ------------------------------------------------------------------------ */
