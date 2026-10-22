@@ -3,11 +3,13 @@
 .nd-sidebar .nd-nav-children .workspace-nav-icon { width: 16px; height: 16px; }
 .ad-nav-icon { display: inline-flex; align-items: center; justify-content: center; }
 .nd-shell button.workspace-theme-toggle, .ad-shell button.workspace-theme-toggle {
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   min-height: 38px; padding: 8px 13px; flex-shrink: 0;
   border: 1px solid var(--nd-border); border-radius: 20px;
-  background: var(--nd-surface); color: var(--nd-text);
+  background: var(--nd-surface); color: var(--nd-accent, var(--green));
   font: 600 12px/1.2 Inter, system-ui, sans-serif; cursor: pointer;
 }
 .nd-shell button.workspace-theme-toggle:hover, .ad-shell button.workspace-theme-toggle:hover { background: var(--nd-soft); }
 .workspace-theme-toggle:focus-visible { outline: 3px solid #55cfa8; outline-offset: 3px; }
+
+.workspace-theme-toggle > span:first-child { font-size: 16px; line-height: 1; }
