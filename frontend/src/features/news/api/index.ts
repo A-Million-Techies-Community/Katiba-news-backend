@@ -1,18 +1,19 @@
+import { sessionFetch } from '../../../auth/session'
 /** Use this tab's explicit account login, never an unrelated Django admin session. */
 export async function newsFetch(path: string, method = 'GET', body?: unknown): Promise<Response> {
   let access: string | undefined
   try { access = JSON.parse(sessionStorage.getItem('katibaUserSession') || '{}').access }
   catch { /* A malformed saved login is handled as signed out below. */ }
-  if (!access) throw new Error('Sign in with your Writer or Editor account on the main website, then open News dashboard.')
+  if (!access) throw new Error('Sign in through your staff workspace to open the newsroom.')
   const multipart = body instanceof FormData
-  const response = await fetch(path, {
+  const response = await sessionFetch(path, {
     method, credentials: 'omit', headers: {
       ...(access ? { Authorization: `Bearer ${access}` } : {}),
       ...(body !== undefined && !multipart ? { 'Content-Type': 'application/json' } : {}),
     }, body: multipart ? body : body !== undefined ? JSON.stringify(body) : undefined,
   })
   if (!response.ok) {
-    if (response.status === 401) throw new Error('Please sign in through the existing Katiba login, then return to this dashboard.')
+    if (response.status === 401) throw new Error('Your session expired. Sign in to your staff workspace again.')
     const data = await response.json().catch(() => ({ detail: 'The request could not be completed.' }))
     throw new Error(typeof data.detail === 'string' ? data.detail : Object.entries(data).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(' ') : value}`).join(' '))
   }

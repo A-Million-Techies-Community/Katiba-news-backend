@@ -19,10 +19,10 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from apps.users.access import eligible_author, has_news_permission
+from apps.users.access import eligible_author, has_news_permission, editorial_access
 from apps.users.authentication import VersionedJWTAuthentication
 from .models import Category, Lead, NewsImage, Story
-from .serializers import CategorySerializer, LeadSerializer, NewsImageUploadSerializer, ReviewSerializer, StorySerializer
+from .serializers import PublicStorySerializer, CategorySerializer, LeadSerializer, NewsImageUploadSerializer, ReviewSerializer, StorySerializer
 
 
 class LeadPermission(BasePermission):
@@ -88,8 +88,7 @@ class LeadViewSet(viewsets.ReadOnlyModelViewSet):
 
 def is_editor(user):
     """Allow review grants only when the account does not also have Author access."""
-    return (user.is_authenticated and has_news_permission(user, 'review_lead')
-            and not eligible_author(user))
+    return editorial_access(user)
 
 
 def is_author(user):
@@ -160,7 +159,7 @@ class StoryViewSet(DashboardViewSet):
         status = self.request.query_params.get('status')
         if self.action == 'list' and status is not None:
             if status not in Story.Status.values:
-                raise serializers.ValidationError({'status': 'Use draft, submitted, approved, or rejected.'})
+                raise serializers.ValidationError({'status': 'Use draft, submitted, approved, rejected, or published.'})
             queryset = queryset.filter(status=status)
         # Serialize competing updates and review decisions on databases supporting row locks.
         if self.request.method in ('PUT', 'PATCH', 'DELETE', 'POST'):
@@ -255,6 +254,23 @@ class StoryViewSet(DashboardViewSet):
         """Reject a submitted story with feedback for its author."""
         return self.review(request, Story.Status.REJECTED)
 
+    @action(detail=True, methods=['post'])
+    @transaction.atomic
+    def publish(self, request, pk=None):
+        if not is_editor(request.user):
+            raise PermissionDenied('Editor access is required to publish.')
+        story = self.get_object()
+        if story.status != Story.Status.APPROVED:
+            raise serializers.ValidationError('Only approved stories can be published.')
+        if story.author_id == request.user.pk:
+            raise PermissionDenied('You cannot publish your own story.')
+        if request.data != {}:
+            raise serializers.ValidationError('Send an empty JSON object.')
+        story.status = Story.Status.PUBLISHED
+        story.published_at = timezone.now()
+        story.save(update_fields=['status', 'published_at', 'updated_at'])
+        return Response(self.get_serializer(story).data)
+
 
 class DashboardAccessView(APIView):
     """Expose current permissions so the frontend can choose the appropriate dashboard."""
@@ -293,12 +309,14 @@ class NewsImageUploadView(APIView):
 class NewsImageView(APIView):
     """Serve image bytes only to people permitted to view the associated news story."""
     authentication_classes = (VersionedJWTAuthentication, SessionAuthentication)
-    permission_classes = (NewsroomPermission,)
+    permission_classes = (permissions.AllowAny,)
 
     def get(self, request, pk):
         """Keep private draft images and unused uploads out of other accounts' reach."""
         images = NewsImage.objects.select_related('story')
-        visible = Q(story__author=request.user) | Q(story__isnull=True, uploaded_by=request.user)
+        visible = Q(story__status=Story.Status.PUBLISHED)
+        if request.user.is_authenticated:
+            visible |= Q(story__author=request.user) | Q(story__isnull=True, uploaded_by=request.user)
         if is_editor(request.user):
             visible |= Q(story__isnull=False) & ~Q(story__status=Story.Status.DRAFT)
         image = get_object_or_404(images.filter(visible), pk=pk)
@@ -306,3 +324,28 @@ class NewsImageView(APIView):
         response['Cache-Control'] = 'private, no-store'
         response['X-Content-Type-Options'] = 'nosniff'
         return response
+
+
+class PublicStoryViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+    serializer_class = PublicStorySerializer
+    pagination_class = LeadPagination
+    queryset = Story.objects.filter(status=Story.Status.PUBLISHED).select_related('author', 'category', 'featured_image')
+
+
+class MediaLibrary(APIView):
+    permission_classes = (NewsroomPermission,)
+
+    def get(self, request):
+        images = NewsImage.objects.filter(uploaded_by=request.user).select_related('story').order_by('-created_at')
+        return Response([{'id': image.pk, 'url': image.api_url, 'story': image.story_id,
+                          'created_at': image.created_at} for image in images])
+
+    @transaction.atomic
+    def delete(self, request, pk):
+        image = get_object_or_404(NewsImage.objects.select_for_update(), pk=pk, uploaded_by=request.user)
+        if image.story_id or image.featured_in.exists():
+            raise serializers.ValidationError('Images attached to stories must be kept with their content.')
+        image.delete()
+        return Response(status=204)

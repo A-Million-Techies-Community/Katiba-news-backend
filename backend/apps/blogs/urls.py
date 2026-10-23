@@ -1,7 +1,9 @@
 from django.urls import path
-from .views import BlogPostListCreateAPIView, BlogPostDetailAPIView, CommentListCreateAPIView, LikeToggleAPIView
+from .views import BlogPostListCreateAPIView, BlogPostDetailAPIView, CommentListCreateAPIView, LikeToggleAPIView, CommentModeration, CommentDelete
 
 urlpatterns = [
+    path('moderation/comments/', CommentModeration.as_view(), name='comment-moderation'),
+    path('moderation/comments/<int:pk>/', CommentDelete.as_view(), name='comment-delete'),
     # Timeline overview channels and core opinion setups
     path("", BlogPostListCreateAPIView.as_view(), name="blog-list-create"),
     

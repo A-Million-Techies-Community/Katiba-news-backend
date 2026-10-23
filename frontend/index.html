@@ -2,9 +2,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/katiba-logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <meta name="theme-color" content="#0d1c21" />
+    <meta name="application-name" content="Katiba News" />
+    <title>Katiba News</title>
+    <script>
+      // Paint protected workspaces in their saved theme before React or CSS loads.
+      if (/^\/(author|news\/dashboard|features\/dashboard)(\/|$)/.test(location.pathname)) {
+        let theme;
+        try { theme = localStorage.getItem('katibaNewsroomTheme'); } catch {}
+        if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        document.documentElement.dataset.newsroomTheme = theme;
+      }
+    </script>
+    <style>
+      html[data-newsroom-theme="dark"] { background: #0b1411; color: #e8efeb; color-scheme: dark; }
+      html[data-newsroom-theme="light"] { background: #f9fbfb; color: #182b26; color-scheme: light; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

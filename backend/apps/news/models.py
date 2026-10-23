@@ -52,7 +52,7 @@ class Category(models.Model):
 
 def news_image_storage():
     """Resolve private upload storage from the project location on each installation."""
-    return FileSystemStorage(location=settings.BASE_DIR / 'news_uploads')
+    return FileSystemStorage(location=settings.NEWS_UPLOAD_ROOT)
 
 
 class NewsImage(models.Model):
@@ -80,6 +80,7 @@ class Story(models.Model):
         SUBMITTED = 'submitted', 'Submitted'
         APPROVED = 'approved', 'Approved'
         REJECTED = 'rejected', 'Rejected'
+        PUBLISHED = 'published', 'Published'
 
     title = models.CharField(max_length=255)
     content = models.TextField()
@@ -93,6 +94,7 @@ class Story(models.Model):
     feedback = models.TextField(blank=True)
     reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
                                  related_name='reviewed_news_stories')
+    published_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

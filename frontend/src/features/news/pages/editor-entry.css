@@ -1,0 +1,26 @@
+.editor-entry { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #0b2024; color: #e4eff0; font-family: inherit; }
+.editor-entry-card { width: min(100%, 440px); padding: 36px; border: 1px solid #2b474c; border-radius: 16px; background: #142d32; box-shadow: 0 24px 70px #0003; }
+.editor-entry-card a { color: #61e1bf; text-decoration: none; }
+.editor-entry-brand { font-size: 24px; font-weight: 700; }
+.editor-entry-label { margin-top: 32px; font-size: 12px; letter-spacing: 2px; color: #61e1bf; }
+.editor-entry-card h1 { font-size: 30px; margin: 12px 0; }
+.editor-entry-card p { line-height: 1.6; }
+.editor-entry-card form { display: grid; gap: 12px; margin: 28px 0; }
+.editor-entry-card input { width: 100%; box-sizing: border-box; border: 1px solid #47646a; border-radius: 8px; padding: 12px; background: #0b2024; color: #fff; font: inherit; }
+.editor-entry-card input:focus-visible, .editor-entry-card button:focus-visible { outline: 2px solid #61e1bf; outline-offset: 3px; }
+.editor-entry-card button { margin-top: 12px; border: 0; border-radius: 8px; padding: 14px; background: #61e1bf; color: #092b24; font: inherit; font-weight: 700; cursor: pointer; }
+.editor-entry-card button:disabled { opacity: .65; cursor: wait; }
+.editor-entry-error { color: #ffb9b9; }
+
+.staff-entry-options { display: grid; gap: 14px; margin: 28px 0; }
+.staff-entry-options a { display: grid; gap: 8px; padding: 20px; border: 1px solid #47646a; border-radius: 8px; }
+.staff-entry-options a:hover { border-color: #61e1bf; background: #19383d; }
+.staff-entry-options a:focus-visible { outline: 2px solid #61e1bf; outline-offset: 3px; }
+.staff-entry-options strong { display: flex; justify-content: space-between; font-size: 18px; }
+.staff-entry-options a > span { color: #b5c9cd; line-height: 1.5; }
+
+.staff-application-card { width: min(100%, 560px); }
+.editor-entry-card textarea { width: 100%; border: 1px solid #47646a; border-radius: 8px; padding: 12px; background: #0b2024; color: #fff; font: inherit; resize: vertical; }
+.editor-entry-card textarea:focus-visible { outline: 2px solid #61e1bf; outline-offset: 3px; }
+.staff-application-experience { white-space: pre-wrap; overflow-wrap: anywhere; }
+.staff-review-feedback { display: block; width: 100%; margin: 12px 0; border: 1px solid var(--nd-border, #47646a); border-radius: 8px; padding: 12px; background: transparent; color: inherit; font: inherit; resize: vertical; }

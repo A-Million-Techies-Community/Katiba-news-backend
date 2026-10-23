@@ -1,16 +1,8 @@
 from rest_framework.permissions import BasePermission
-
-from .models import User
-
+from .access import eligible_author
 
 class IsAuthor(BasePermission):
-    message = "Author authentication is required."
+    message = 'Writer access is required. Ask an administrator to check your membership.'
 
     def has_permission(self, request, view):
-        user = request.user
-
-        return bool(
-            user.is_authenticated
-            and user.is_active
-            and user.role == User.Role.AUTHOR
-        )
+        return eligible_author(request.user)

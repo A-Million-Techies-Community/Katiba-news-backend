@@ -19,5 +19,21 @@ def has_news_permission(user, codename):
 
 
 def eligible_author(user):
-    return (user.is_active and user.groups.filter(name=AUTHOR).exists()
+    return (user.is_authenticated and user.is_active and not user.is_superuser
+            and not has_news_permission(user, 'review_lead') and user.groups.filter(name=AUTHOR).exists()
             and has_news_permission(user, 'view_assigned_lead'))
+
+
+def editorial_access(user):
+    return bool(user.is_authenticated and user.is_active
+                and has_news_permission(user, 'review_lead')
+                and not user.groups.filter(name=AUTHOR).exists()) or bool(user.is_authenticated and user.is_active and user.is_superuser)
+
+
+WORKSPACE_ADMIN = 'Workspace Administrator'
+
+
+def administer_newsroom(user):
+    """People management is independent of editorial and Django admin access."""
+    return bool(user.is_authenticated and user.is_active and
+                (user.is_superuser or user.groups.filter(name=WORKSPACE_ADMIN).exists()))

@@ -1,4 +1,3 @@
-from django.core.exceptions import ValidationError as DjangoValidationError
 
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -8,41 +7,8 @@ from .models import AuthorProfile
 from .permissions import IsAuthor
 from .serializers import (
     AuthorProfileSerializer,
-    UserRegistrationSerializer,
     UserSerializer,
 )
-
-
-class RegisterView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        serializer = UserRegistrationSerializer(data=request.data)
-
-        if not serializer.is_valid():
-            return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            user = serializer.save()
-        except DjangoValidationError as error:
-            return Response(
-                {"password": error.messages},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        return Response(
-            {
-                "message": (
-                    "Author account created. "
-                    "Sign in to complete your profile."
-                ),
-                "user": UserSerializer(user).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
 
 
 class MeView(APIView):
@@ -113,3 +79,33 @@ class AuthorDashboardView(APIView):
                 "profile": AuthorProfileSerializer(profile).data,
             }
         )
+
+class ProfilePicturePermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        from .access import eligible_author, editorial_access
+        return eligible_author(request.user) or editorial_access(request.user)
+
+
+class ProfilePictureView(APIView):
+    """A staff member can update only their own portrait, independently of onboarding."""
+    permission_classes = [ProfilePicturePermission]
+
+    def put(self, request):
+        from .serializers import ProfilePictureSerializer
+        profile, _ = AuthorProfile.objects.get_or_create(user=request.user)
+        serializer = ProfilePictureSerializer(profile, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        previous_name = profile.profile_picture.name
+        storage = profile.profile_picture.storage
+        serializer.save()
+        if previous_name and previous_name != profile.profile_picture.name:
+            from django.db import transaction
+            transaction.on_commit(lambda: storage.delete(previous_name))
+        request.user._state.fields_cache.pop('author_profile', None)
+        return Response({'profile_picture_url': profile.profile_picture.url})
+
+    def delete(self, request):
+        profile, _ = AuthorProfile.objects.get_or_create(user=request.user)
+        profile.profile_picture.delete(save=True)
+        request.user._state.fields_cache.pop('author_profile', None)
+        return Response({'profile_picture_url': None})

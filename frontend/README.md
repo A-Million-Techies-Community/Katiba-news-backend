@@ -1,75 +1,19 @@
-# React + TypeScript + Vite
+# Katiba News frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Run `npm install` and `npm run dev` from this directory. Start Django from the project root with `.venv/bin/python manage.py runserver`.
 
-Currently, two official plugins are available:
+Readers browse the homepage, news, articles, and blogs without an account. Writers and editors can apply from their respective sign-in pages at `/writer/apply` and `/editor/apply`. Applying creates an inactive account with no staff grants; an administrator must approve it before sign-in.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The “Staff sign in” link opens `/workspace`, offering separate Writer (`/writer/login`) and Editor (`/editor/login`) sign-in pages. Administrators use `/administration/login` directly. Administrator access is not advertised on public pages. The server routes each signed-in account to its permitted workspace:
 
-## React Compiler
+- Writer: write and submit news, articles, and blogs.
+- Editor: review and publish submissions.
+- Admin: create, assign, activate, and suspend writer and editor accounts at `/workspace/admin`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Newsroom Admin is a separate account in the `Workspace Administrator` group, with `is_staff=False` and `is_superuser=False`. It manages Writer/Editor accounts and applications but cannot grant Admin/Superuser access or use Django administration. Create one from the project root with `.venv/bin/python manage.py createadmin`; the command prompts for a username, email, and password. Django superusers use `/admin/` for system administration. The URL being unlisted does not replace server-side authorization.
 
-## Expanding the ESLint configuration
+Run `npm run lint` and `npm run build` to validate frontend changes.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Admins review Writer and Editor applications in **Staff applications**, with required feedback when rejecting. Decisions record the reviewer and time. Approved accounts get only the requested role and an email linking to the appropriate sign-in page. Existing accounts can still be managed in **Writers & editors**. Pending and rejected accounts cannot be activated through that account form.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
-
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-
-```
+The local Django configuration uses the console email backend, so decision emails appear in the backend terminal rather than an inbox.

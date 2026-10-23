@@ -1,7 +1,7 @@
-
+import { sessionFetch } from '../../../auth/session';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
-type BlogStatus = 'draft' | 'under_review' | 'published';
+type BlogStatus = 'draft' | 'under_review' | 'approved' | 'rejected' | 'published';
 
 type BlogComment = {
   id: number;
@@ -23,6 +23,7 @@ type BlogItem = {
   comments?: BlogComment[];
   created_at: string;
   status: BlogStatus;
+  feedback?: string;
 };
 
 type BlogViewProps = {
@@ -43,7 +44,6 @@ const API_BASE = '/api/blogs/';
 
 function extractList<T>(data: unknown): T[] {
   if (Array.isArray(data)) return data as T[];
-
   if (
     data &&
     typeof data === 'object' &&
@@ -52,7 +52,6 @@ function extractList<T>(data: unknown): T[] {
   ) {
     return (data as { results: T[] }).results;
   }
-
   return [];
 }
 
@@ -72,19 +71,15 @@ function getToken(): string | null {
 
 function headers(json = false): HeadersInit {
   const result: Record<string, string> = {};
-
   if (json) result['Content-Type'] = 'application/json';
-
   const token = getToken();
   if (token) result.Authorization = `Bearer ${token}`;
-
   return result;
 }
 
 async function readResponse(response: Response): Promise<unknown> {
   const text = await response.text();
   if (!text) return null;
-
   try {
     return JSON.parse(text);
   } catch {
@@ -94,40 +89,31 @@ async function readResponse(response: Response): Promise<unknown> {
 
 function errorMessage(data: unknown, fallback: string): string {
   if (typeof data === 'string' && data) return data;
-
   if (data && typeof data === 'object') {
     const record = data as Record<string, unknown>;
-
     if (typeof record.detail === 'string') return record.detail;
     if (typeof record.error === 'string') return record.error;
     if (typeof record.message === 'string') return record.message;
-
     const messages = Object.entries(record).flatMap(([key, value]) => {
       if (Array.isArray(value)) return value.map((item) => `${key}: ${item}`);
       if (typeof value === 'string') return [`${key}: ${value}`];
       return [];
     });
-
     if (messages.length) return messages.join(' ');
   }
-
   return fallback;
 }
 
 function normalizeStatus(value: unknown): BlogStatus {
-  if (value === 'draft' || value === 'under_review' || value === 'published') {
+  if (value === 'draft' || value === 'under_review' || value === 'published' || value === 'approved' || value === 'rejected') {
     return value;
   }
-
-  // Posts created before status support are treated as published.
   return 'published';
 }
 
 function normalizePost(value: unknown): BlogItem | null {
   if (!value || typeof value !== 'object') return null;
-
   const post = value as Partial<BlogItem>;
-
   if (
     typeof post.id !== 'number' ||
     typeof post.title !== 'string' ||
@@ -136,7 +122,6 @@ function normalizePost(value: unknown): BlogItem | null {
   ) {
     return null;
   }
-
   return {
     id: post.id,
     title: post.title,
@@ -148,63 +133,50 @@ function normalizePost(value: unknown): BlogItem | null {
     comments: Array.isArray(post.comments) ? post.comments : [],
     created_at: post.created_at || '',
     status: normalizeStatus(post.status),
+    feedback: post.feedback,
   };
 }
 
 function formatDate(value: string): string {
   if (!value) return 'Date unavailable';
-
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Date unavailable';
-
   return new Intl.DateTimeFormat('en-KE', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
   }).format(date);
 }
 
 function initials(value?: string): string {
   const name = value?.trim();
   if (!name) return 'U';
-
-  return name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0].toUpperCase())
-    .join('');
+  return name.split(/\s+/).slice(0, 2).map((word) => word[0].toUpperCase()).join('');
 }
 
 function authorName(post: BlogItem): string {
-  return post.author_username?.trim() || 'Unknown author';
+  return post.author_username?.trim() || 'Anonymous';
 }
 
 function commentName(comment: BlogComment): string {
   return comment.user_username?.trim() || 'Community member';
 }
 
-function statusLabel(status: BlogStatus): string {
+function StatusBadge({ status }: { status: BlogStatus }) {
+  let config = { bg: '', text: '', label: '' };
   switch (status) {
-    case 'draft':
-      return 'Draft';
-    case 'under_review':
-      return 'Under review';
-    case 'published':
-      return 'Published';
+    case 'approved': config = { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'Approved' }; break;
+    case 'rejected': config = { bg: 'bg-red-50', text: 'text-red-700', label: 'Needs Revisions' }; break;
+    case 'draft': config = { bg: 'bg-slate-100', text: 'text-slate-600', label: 'Draft' }; break;
+    case 'under_review': config = { bg: 'bg-amber-50', text: 'text-amber-700', label: 'In Review' }; break;
+    case 'published': config = { bg: 'bg-blue-50', text: 'text-blue-700', label: 'Published' }; break;
   }
-}
 
-function statusClasses(status: BlogStatus): string {
-  switch (status) {
-    case 'draft':
-      return 'border-slate-200 bg-slate-100 text-slate-700';
-    case 'under_review':
-      return 'border-amber-200 bg-amber-50 text-amber-800';
-    case 'published':
-      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  }
+  return (
+    <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold ${config.bg} ${config.text}`}>
+      {config.label}
+    </span>
+  );
 }
 
 export function BlogView({
@@ -225,13 +197,10 @@ export function BlogView({
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [newPostStatus, setNewPostStatus] = useState<
-    'draft' | 'under_review'
-  >('draft');
+  const [editingPost, setEditingPost] = useState<BlogItem | null>(null);
+  const [newPostStatus, setNewPostStatus] = useState<'draft' | 'under_review'>('draft');
 
-  const [commentDrafts, setCommentDrafts] = useState<Record<number, string>>(
-    {},
-  );
+  const [commentDrafts, setCommentDrafts] = useState<Record<number, string>>({});
   const [expandedPosts, setExpandedPosts] = useState<number[]>([]);
   const [openComments, setOpenComments] = useState<number[]>([]);
 
@@ -241,36 +210,17 @@ export function BlogView({
   const session = readSession();
 
   const loadPosts = useCallback(async (initial = false) => {
-    if (initial) {
-      setLoading(true);
-    } else {
-      setRefreshing(true);
-    }
-
+    if (initial) setLoading(true);
+    else setRefreshing(true);
     setError('');
 
     try {
-      const response = await fetch(`${API_BASE}?page_size=100`, {
-        headers: headers(),
-      });
-
+      const response = await sessionFetch(`${API_BASE}?mine=true&page_size=100`, { headers: headers() });
       const data = await readResponse(response);
-
-      if (!response.ok) {
-        throw new Error(errorMessage(data, 'Unable to load posts.'));
-      }
-
-      setPosts(
-        extractList<unknown>(data)
-          .map(normalizePost)
-          .filter((post): post is BlogItem => post !== null),
-      );
+      if (!response.ok) throw new Error(errorMessage(data, 'Unable to load posts.'));
+      setPosts(extractList<unknown>(data).map(normalizePost).filter((post): post is BlogItem => post !== null));
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Unable to connect to the blog server.',
-      );
+      setError(err instanceof Error ? err.message : 'Unable to connect to the blog server.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -278,15 +228,17 @@ export function BlogView({
   }, []);
 
   useEffect(() => {
-    void loadPosts(true);
+    let active = true;
+    queueMicrotask(() => { if (active) void loadPosts(true); });
+    return () => { active = false; };
   }, [loadPosts]);
 
   const counts = useMemo(
     () => ({
       all: posts.length,
       draft: posts.filter((post) => post.status === 'draft').length,
-      under_review: posts.filter((post) => post.status === 'under_review')
-        .length,
+      under_review: posts.filter((post) => post.status === 'under_review').length,
+      approved: posts.filter((post) => post.status === 'approved').length,
       published: posts.filter((post) => post.status === 'published').length,
     }),
     [posts],
@@ -294,58 +246,32 @@ export function BlogView({
 
   const filteredPosts = useMemo(() => {
     const query = search.trim().toLowerCase();
-
     return posts
       .filter((post) => {
-        if (statusFilter !== 'all' && post.status !== statusFilter) {
-          return false;
-        }
-
+        if (statusFilter !== 'all' && post.status !== statusFilter) return false;
         if (!query) return true;
-
         return (
           post.title.toLowerCase().includes(query) ||
           post.content.toLowerCase().includes(query) ||
           authorName(post).toLowerCase().includes(query) ||
-          (post.comments || []).some((comment) =>
-            comment.content.toLowerCase().includes(query),
-          )
+          (post.comments || []).some((comment) => comment.content.toLowerCase().includes(query))
         );
       })
       .sort((a, b) => {
-        if (sortBy === 'popular') {
-          return (b.likes_count || 0) - (a.likes_count || 0);
-        }
-
+        if (sortBy === 'popular') return (b.likes_count || 0) - (a.likes_count || 0);
         const first = new Date(a.created_at).getTime() || 0;
         const second = new Date(b.created_at).getTime() || 0;
-
         return sortBy === 'newest' ? second - first : first - second;
       });
   }, [posts, search, sortBy, statusFilter]);
 
-  const publishedPosts = posts.filter(
-    (post) => post.status === 'published',
-  );
+  const publishedPosts = posts.filter((post) => post.status === 'published');
+  const totalLikes = publishedPosts.reduce((sum, post) => sum + (post.likes_count || 0), 0);
 
-  const totalLikes = publishedPosts.reduce(
-    (sum, post) => sum + (post.likes_count || 0),
-    0,
-  );
-
-  const totalComments = publishedPosts.reduce(
-    (sum, post) => sum + (post.comments?.length || 0),
-    0,
-  );
-
-  const savePost = async (
-    event: React.FormEvent<HTMLFormElement>,
-    status: 'draft' | 'under_review',
-  ) => {
+  const savePost = async (event: React.FormEvent<HTMLFormElement>, status: 'draft' | 'under_review') => {
     event.preventDefault();
     setError('');
     setSuccess('');
-
     const cleanTitle = title.trim();
     const cleanContent = content.trim();
 
@@ -354,677 +280,310 @@ export function BlogView({
       return;
     }
 
-    if (cleanTitle.length > 255) {
-      setError('The title cannot exceed 255 characters.');
-      return;
-    }
-
     setSaving(true);
-
     try {
-      const response = await fetch(API_BASE, {
-        method: 'POST',
+      const response = await sessionFetch(editingPost ? `${API_BASE}${encodeURIComponent(editingPost.slug)}/` : API_BASE, {
+        method: editingPost ? 'PATCH' : 'POST',
         headers: headers(true),
-        body: JSON.stringify({
-          title: cleanTitle,
-          content: cleanContent,
-          status,
-        }),
+        body: JSON.stringify({ title: cleanTitle, content: cleanContent, status }),
       });
-
       const data = await readResponse(response);
-
-      if (!response.ok) {
-        throw new Error(errorMessage(data, 'Could not save your post.'));
-      }
+      if (!response.ok) throw new Error(errorMessage(data, 'Could not save your post.'));
 
       setTitle('');
       setContent('');
       setNewPostStatus('draft');
-
-      setSuccess(
-        status === 'draft'
-          ? 'Your post was saved as a draft.'
-          : 'Your post was submitted for review.',
-      );
-
+      setEditingPost(null);
+      setSuccess(status === 'draft' ? 'Your post was saved as a draft.' : 'Your post was submitted for review.');
       await loadPosts();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Could not save your post.',
-      );
+      setError(err instanceof Error ? err.message : 'Could not save your post.');
     } finally {
       setSaving(false);
     }
   };
 
-  const changePostStatus = async (
-    post: BlogItem,
-    status: BlogStatus,
-  ) => {
+  const changePostStatus = async (post: BlogItem, status: BlogStatus) => {
     setError('');
     setSuccess('');
     setSavingStatusId(post.id);
-
     try {
-      const response = await fetch(
-        `${API_BASE}${encodeURIComponent(post.slug)}/`,
-        {
-          method: 'PATCH',
-          headers: headers(true),
-          body: JSON.stringify({ status }),
-        },
-      );
-
+      const response = await sessionFetch(`${API_BASE}${encodeURIComponent(post.slug)}/`, {
+        method: 'PATCH',
+        headers: headers(true),
+        body: JSON.stringify({ status }),
+      });
       const data = await readResponse(response);
-
-      if (!response.ok) {
-        throw new Error(
-          errorMessage(
-            data,
-            'Could not update the post status. Check your API permissions and status field.',
-          ),
-        );
-      }
-
+      if (!response.ok) throw new Error(errorMessage(data, 'Could not update the post status.'));
       const returnedPost = normalizePost(data);
-
-      setPosts((current) =>
-        current.map((item) =>
-          item.id === post.id
-            ? { ...item, status: returnedPost?.status ?? status }
-            : item,
-        ),
-      );
-
-      setSuccess(`Post status changed to "${statusLabel(status)}".`);
+      setPosts((current) => current.map((item) => (item.id === post.id ? { ...item, status: returnedPost?.status ?? status } : item)));
+      setSuccess(`Post status updated.`);
       await loadPosts();
     } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : 'Could not update the post status.',
-      );
+      setError(err instanceof Error ? err.message : 'Could not update the post status.');
     } finally {
       setSavingStatusId(null);
     }
   };
 
   const toggleLike = async (post: BlogItem) => {
-    setError('');
-    setSuccess('');
     setLikingId(post.id);
-
     try {
-      const response = await fetch(
-        `${API_BASE}${encodeURIComponent(post.slug)}/like/`,
-        { method: 'POST', headers: headers() },
-      );
-
-      const data = await readResponse(response);
-
-      if (!response.ok) {
-        throw new Error(errorMessage(data, 'Could not update the like.'));
-      }
-
-      setSuccess('Your like action was saved.');
+      const response = await sessionFetch(`${API_BASE}${encodeURIComponent(post.slug)}/like/`, { method: 'POST', headers: headers() });
+      if (!response.ok) throw new Error();
       await loadPosts();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Could not update the like.',
-      );
+      // silent fail for likes
     } finally {
       setLikingId(null);
     }
   };
 
-  const submitComment = async (
-    event: React.FormEvent<HTMLFormElement>,
-    post: BlogItem,
-  ) => {
+  const submitComment = async (event: React.FormEvent<HTMLFormElement>, post: BlogItem) => {
     event.preventDefault();
-
     const draft = (commentDrafts[post.id] || '').trim();
-
-    if (!draft) {
-      setError('Write a comment before submitting.');
-      return;
-    }
-
-    setError('');
-    setSuccess('');
+    if (!draft) return;
     setCommentingId(post.id);
-
     try {
-      const response = await fetch(
-        `${API_BASE}${encodeURIComponent(post.slug)}/comments/`,
-        {
-          method: 'POST',
-          headers: headers(true),
-          body: JSON.stringify({ post: post.id, content: draft }),
-        },
-      );
-
-      const data = await readResponse(response);
-
-      if (!response.ok) {
-        throw new Error(errorMessage(data, 'Could not submit your comment.'));
-      }
-
+      const response = await sessionFetch(`${API_BASE}${encodeURIComponent(post.slug)}/comments/`, {
+        method: 'POST',
+        headers: headers(true),
+        body: JSON.stringify({ post: post.id, content: draft }),
+      });
+      if (!response.ok) throw new Error('Could not submit comment.');
       setCommentDrafts((current) => ({ ...current, [post.id]: '' }));
-      setSuccess('Your comment was saved.');
-
-      setOpenComments((current) =>
-        current.includes(post.id) ? current : [...current, post.id],
-      );
-
+      setOpenComments((current) => (current.includes(post.id) ? current : [...current, post.id]));
       await loadPosts();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'Could not submit your comment.',
-      );
+      setError(String(err));
     } finally {
       setCommentingId(null);
     }
   };
 
-  const toggleId = (
-    id: number,
-    setter: React.Dispatch<React.SetStateAction<number[]>>,
-  ) => {
-    setter((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
+  const toggleId = (id: number, setter: React.Dispatch<React.SetStateAction<number[]>>) => {
+    setter((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
   };
 
-  const statusTabs: {
-    value: StatusFilter;
-    label: string;
-    count: number;
-  }[] = [
-    { value: 'all', label: 'All posts', count: counts.all },
-    { value: 'draft', label: 'Draft', count: counts.draft },
-    {
-      value: 'under_review',
-      label: 'Under review',
-      count: counts.under_review,
-    },
-    { value: 'published', label: 'Published', count: counts.published },
-  ];
-
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-800">
-      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 sm:py-8">
-        <header className="mb-6 flex flex-col justify-between gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-lg font-bold text-white">
-              K
-            </div>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">
-                Katiba News
-              </p>
-              <h1 className="mt-0.5 text-2xl font-bold tracking-tight text-slate-900">
-                Community blog
-              </h1>
-              <p className="mt-1 text-sm text-slate-500">
-                Create, review and manage your posts.
-              </p>
-            </div>
+    <main className="min-h-screen bg-slate-50 text-slate-800 font-sans selection:bg-indigo-100">
+      <div className="mx-auto max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8">
+        
+        <header className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Blogs Overview</h1>
+            <p className="mt-1 text-sm text-slate-500">Community pieces, opinions, and personal stories.</p>
           </div>
-
-          <nav className="flex flex-wrap gap-2">
+          <nav className="flex gap-3">
             {onBackToDashboard && (
-              <button
-                type="button"
-                onClick={onBackToDashboard}
-                className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-              >
-                ← Dashboard
+              <button onClick={onBackToDashboard} className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+                Dashboard
               </button>
             )}
             {onNavigateToArticles && (
-              <button
-                type="button"
-                onClick={onNavigateToArticles}
-                className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-              >
-                Articles
+              <button onClick={onNavigateToArticles} className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 transition-colors shadow-sm">
+                View Feed
               </button>
             )}
           </nav>
         </header>
 
-        <section className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <Stat
-            label="Published posts"
-            value={loading ? '—' : counts.published.toLocaleString('en-KE')}
-            icon="▤"
-          />
-          <Stat
-            label="Total likes"
-            value={loading ? '—' : totalLikes.toLocaleString('en-KE')}
-            icon="♡"
-          />
-          <Stat
-            label="Comments"
-            value={loading ? '—' : totalComments.toLocaleString('en-KE')}
-            icon="☰"
-          />
-        </section>
-
         {(error || success) && (
-          <div
-            role={error ? 'alert' : 'status'}
-            className={`mb-5 flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm ${
-              error
-                ? 'border-red-200 bg-red-50 text-red-700'
-                : 'border-emerald-200 bg-emerald-50 text-emerald-700'
-            }`}
-          >
+          <div className={`mb-8 flex items-center justify-between rounded-md border px-4 py-3 text-sm font-medium ${
+            error ? 'border-red-200 bg-red-50 text-red-700' : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+          }`}>
             <span>{error || success}</span>
-            <button
-              type="button"
-              onClick={() => {
-                setError('');
-                setSuccess('');
-              }}
-              aria-label="Dismiss message"
-              className="font-bold"
-            >
-              ×
-            </button>
+            <button onClick={() => { setError(''); setSuccess(''); }} className="opacity-60 hover:opacity-100">×</button>
           </div>
         )}
 
-        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-          <section className="min-w-0">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-              <label className="relative min-w-0 flex-1">
-                <span className="sr-only">Search posts</span>
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-                  ⌕
-                </span>
+        {/* Dashboard Cards */}
+        <section className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <OverviewCard 
+            title="Blog Drafts" 
+            value={loading ? '-' : counts.draft} 
+            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+            colorClass="border-t-amber-500" 
+            textColor="text-amber-600" 
+            bgTint="bg-amber-50"
+            linkText="View drafts" 
+            onClick={() => setStatusFilter('draft')} 
+          />
+
+          <OverviewCard 
+            title="In Review" 
+            value={loading ? '-' : counts.under_review} 
+            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}
+            colorClass="border-t-red-500" 
+            textColor="text-red-600" 
+            bgTint="bg-red-50"
+            linkText="Review queue" 
+            onClick={() => setStatusFilter('under_review')} 
+          />
+
+          <OverviewCard 
+            title="Approved" 
+            value={loading ? '-' : counts.approved} 
+            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+            colorClass="border-t-teal-500" 
+            textColor="text-teal-600" 
+            bgTint="bg-teal-50"
+            linkText="Ready to publish" 
+            onClick={() => setStatusFilter('approved')} 
+          />
+
+          <OverviewCard 
+            title="Published" 
+            value={loading ? '-' : counts.published} 
+            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>}
+            colorClass="border-t-emerald-500" 
+            textColor="text-emerald-600" 
+            bgTint="bg-emerald-50"
+            linkText="Live blogs" 
+            onClick={() => setStatusFilter('published')} 
+          />
+
+          <OverviewCard 
+            title="Total Likes" 
+            value={loading ? '-' : totalLikes} 
+            icon={<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>}
+            colorClass="border-t-purple-500" 
+            textColor="text-purple-600" 
+            bgTint="bg-purple-50"
+            linkText="View analytics" 
+            onClick={() => setStatusFilter('all')} 
+          />
+        </section>
+
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+          
+          <section className="min-w-0 flex flex-col gap-6">
+            <div className="flex flex-col sm:flex-row justify-between gap-4">
+              <div className="relative flex-1 max-w-md">
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">⌕</span>
                 <input
                   type="search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search posts or authors..."
-                  className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-10 pr-3 text-sm outline-none placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                  placeholder="Search articles..."
+                  className="w-full rounded-md border border-slate-200 bg-white py-2 pl-10 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
                 />
-              </label>
-
-              <label>
-                <span className="sr-only">Sort posts</span>
+              </div>
+              <div className="flex gap-2">
                 <select
                   value={sortBy}
-                  onChange={(event) =>
-                    setSortBy(event.target.value as SortOption)
-                  }
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-blue-400 sm:w-auto"
+                  onChange={(event) => setSortBy(event.target.value as SortOption)}
+                  className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                 >
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                  <option value="popular">Most liked</option>
+                  <option value="newest">Newest</option>
+                  <option value="oldest">Oldest</option>
+                  <option value="popular">Popular</option>
                 </select>
-              </label>
-
-              <button
-                type="button"
-                onClick={() => void loadPosts()}
-                disabled={refreshing}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium hover:bg-slate-100 disabled:opacity-60"
-              >
-                {refreshing ? 'Refreshing…' : '↻ Refresh'}
-              </button>
+                <button onClick={() => void loadPosts()} disabled={refreshing} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
+                  ↻
+                </button>
+              </div>
             </div>
 
-            <div className="mb-4 flex gap-1 overflow-x-auto border-b border-slate-200">
-              {statusTabs.map((tab) => {
-                const active = statusFilter === tab.value;
-
-                return (
-                  <button
-                    key={tab.value}
-                    type="button"
-                    onClick={() => setStatusFilter(tab.value)}
-                    className={`flex shrink-0 items-center gap-2 border-b-2 px-3 py-3 text-sm font-semibold transition ${
-                      active
-                        ? 'border-blue-600 text-blue-700'
-                        : 'border-transparent text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    {tab.label}
-                    <span
-                      className={`rounded-md px-1.5 py-0.5 text-[10px] ${
-                        active
-                          ? 'bg-blue-50 text-blue-700'
-                          : 'bg-slate-100 text-slate-500'
-                      }`}
-                    >
-                      {tab.count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-base font-bold text-slate-900">
-                {statusFilter === 'all'
-                  ? 'All posts'
-                  : statusLabel(statusFilter)}
-              </h2>
-              <span className="text-xs text-slate-500">
-                {loading ? 'Loading…' : `${filteredPosts.length} posts`}
-              </span>
+            <div className="flex gap-2 border-b border-slate-200 pb-px overflow-x-auto">
+              {[{v:'all',l:'All'},{v:'draft',l:'Drafts'},{v:'under_review',l:'In Review'},{v:'approved',l:'Approved'},{v:'published',l:'Published'}].map(t => (
+                <button key={t.v} onClick={() => setStatusFilter(t.v as StatusFilter)} className={`px-4 py-2 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${statusFilter === t.v ? 'border-emerald-500 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'}`}>
+                  {t.l}
+                </button>
+              ))}
             </div>
 
             {loading ? (
-              <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
-                {[1, 2, 3].map((item) => (
-                  <div key={item} className="animate-pulse p-4">
-                    <div className="mb-3 h-3 w-28 rounded bg-slate-200" />
-                    <div className="mb-3 h-5 w-3/4 rounded bg-slate-200" />
-                    <div className="h-3 w-full rounded bg-slate-100" />
-                    <div className="mt-2 h-3 w-4/5 rounded bg-slate-100" />
-                  </div>
-                ))}
+              <div className="space-y-4">
+                {[1, 2].map((i) => <div key={i} className="h-40 animate-pulse rounded-lg bg-white border border-slate-200 shadow-sm" />)}
               </div>
             ) : filteredPosts.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-10 text-center">
-                <div className="mb-3 text-3xl text-slate-300">
-                  {search ? '⌕' : '✎'}
-                </div>
-                <h3 className="font-semibold text-slate-800">
-                  {search
-                    ? 'No matching posts'
-                    : statusFilter === 'all'
-                      ? 'No posts yet'
-                      : `No ${statusLabel(statusFilter).toLowerCase()} posts`}
-                </h3>
-                <p className="mx-auto mt-1 max-w-sm text-sm leading-6 text-slate-500">
-                  {search
-                    ? 'Try another search phrase.'
-                    : 'Posts in this section will appear here.'}
-                </p>
-                {search && (
-                  <button
-                    type="button"
-                    onClick={() => setSearch('')}
-                    className="mt-3 text-sm font-semibold text-blue-600"
-                  >
-                    Clear search
-                  </button>
-                )}
+              <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white py-16 text-center">
+                <p className="text-slate-500">No blogs found.</p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-white">
+              <div className="space-y-4">
                 {filteredPosts.map((post) => {
                   const comments = post.comments || [];
                   const isExpanded = expandedPosts.includes(post.id);
                   const showComments = openComments.includes(post.id);
-                  const longContent = post.content.length > 420;
-                  const displayedContent =
-                    longContent && !isExpanded
-                      ? `${post.content.slice(0, 420)}…`
-                      : post.content;
-
-                  const isOwnPost =
-                    !!session?.username &&
-                    session.username === post.author_username;
+                  const longContent = post.content.length > 250;
+                  const displayedContent = longContent && !isExpanded ? `${post.content.slice(0, 250)}...` : post.content;
+                  const isOwnPost = !!session?.username && session.username === post.author_username;
 
                   return (
-                    <article key={post.id} className="p-4 sm:p-5">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-blue-700">
-                          {initials(authorName(post))}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                            <span className="text-sm font-semibold text-slate-800">
-                              {authorName(post)}
-                            </span>
-
-                            {isOwnPost && (
-                              <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">
-                                You
-                              </span>
-                            )}
-
-                            <span className="text-xs text-slate-400">·</span>
-
-                            <time
-                              dateTime={post.created_at}
-                              className="text-xs text-slate-500"
-                            >
-                              {formatDate(post.created_at)}
-                            </time>
-                          </div>
-
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <h3 className="break-words text-lg font-bold leading-snug text-slate-900">
-                              {post.title}
-                            </h3>
-                            <span
-                              className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-semibold ${statusClasses(post.status)}`}
-                            >
-                              {statusLabel(post.status)}
-                            </span>
-                          </div>
-
-                          <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">
-                            {displayedContent}
-                          </p>
-
-                          {longContent && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                toggleId(post.id, setExpandedPosts)
-                              }
-                              className="mt-1 text-sm font-semibold text-blue-600 hover:text-blue-700"
-                            >
-                              {isExpanded ? 'Show less' : 'Read more'}
-                            </button>
-                          )}
-
-                          {isOwnPost && (
-                            <div className="mt-3 flex flex-wrap gap-2 rounded-lg bg-slate-50 p-2.5">
-                              <span className="self-center text-xs font-semibold text-slate-500">
-                                Manage:
-                              </span>
-
-                              {post.status === 'draft' && (
-                                <button
-                                  type="button"
-                                  disabled={savingStatusId === post.id}
-                                  onClick={() =>
-                                    void changePostStatus(post, 'under_review')
-                                  }
-                                  className="rounded-md border border-amber-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-50 disabled:opacity-50"
-                                >
-                                  {savingStatusId === post.id
-                                    ? 'Saving…'
-                                    : 'Submit for review'}
-                                </button>
-                              )}
-
-                              {post.status === 'under_review' && (
-                                <>
-                                  <button
-                                    type="button"
-                                    disabled={savingStatusId === post.id}
-                                    onClick={() =>
-                                      void changePostStatus(post, 'published')
-                                    }
-                                    className="rounded-md bg-emerald-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                                  >
-                                    {savingStatusId === post.id
-                                      ? 'Saving…'
-                                      : 'Publish'}
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    disabled={savingStatusId === post.id}
-                                    onClick={() =>
-                                      void changePostStatus(post, 'draft')
-                                    }
-                                    className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-                                  >
-                                    Return to draft
-                                  </button>
-                                </>
-                              )}
-
-                              {post.status === 'published' && (
-                                <button
-                                  type="button"
-                                  disabled={savingStatusId === post.id}
-                                  onClick={() =>
-                                    void changePostStatus(post, 'draft')
-                                  }
-                                  className="rounded-md border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
-                                >
-                                  {savingStatusId === post.id
-                                    ? 'Saving…'
-                                    : 'Move to draft'}
-                                </button>
-                              )}
+                    <article key={post.id} className="rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden">
+                      <div className="p-5 cursor-pointer hover:bg-slate-50/50 transition-colors" onClick={() => toggleId(post.id, setExpandedPosts)}>
+                        <div className="mb-4 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-600">
+                              {initials(authorName(post))}
                             </div>
-                          )}
-
-                          {post.status === 'published' && (
-                            <>
-                              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-3">
-                                <div className="flex items-center gap-4 text-xs text-slate-500">
-                                  <span>
-                                    <strong className="font-semibold text-slate-700">
-                                      {post.likes_count || 0}
-                                    </strong>{' '}
-                                    likes
-                                  </span>
-                                  <span>
-                                    <strong className="font-semibold text-slate-700">
-                                      {comments.length}
-                                    </strong>{' '}
-                                    comments
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => void toggleLike(post)}
-                                    disabled={likingId === post.id}
-                                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-60"
-                                  >
-                                    {likingId === post.id
-                                      ? 'Updating…'
-                                      : '♡ Like'}
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      toggleId(post.id, setOpenComments)
-                                    }
-                                    className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
-                                  >
-                                    {showComments
-                                      ? 'Hide comments'
-                                      : 'Comment'}
-                                  </button>
-                                </div>
-                              </div>
-
-                              {showComments && (
-                                <div className="mt-4 border-t border-slate-100 pt-4">
-                                  <h4 className="mb-3 text-sm font-semibold text-slate-800">
-                                    Discussion
-                                  </h4>
-
-                                  {comments.length === 0 ? (
-                                    <p className="mb-3 text-sm text-slate-500">
-                                      No comments yet. Start the conversation.
-                                    </p>
-                                  ) : (
-                                    <div className="mb-4 space-y-3">
-                                      {comments.map((comment) => (
-                                        <div
-                                          key={comment.id}
-                                          className="flex gap-2.5"
-                                        >
-                                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-600">
-                                            {initials(commentName(comment))}
-                                          </div>
-
-                                          <div className="min-w-0 flex-1 rounded-lg bg-slate-50 px-3 py-2.5">
-                                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                              <span className="text-xs font-semibold text-slate-800">
-                                                {commentName(comment)}
-                                              </span>
-                                              <time className="text-[10px] text-slate-400">
-                                                {formatDate(comment.created_at)}
-                                              </time>
-                                            </div>
-                                            <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-5 text-slate-600">
-                                              {comment.content}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-
-                                  <form
-                                    onSubmit={(event) =>
-                                      void submitComment(event, post)
-                                    }
-                                    className="flex flex-col gap-2 sm:flex-row sm:items-end"
-                                  >
-                                    <label className="min-w-0 flex-1">
-                                      <span className="sr-only">
-                                        Write a comment
-                                      </span>
-                                      <textarea
-                                        value={commentDrafts[post.id] || ''}
-                                        onChange={(event) =>
-                                          setCommentDrafts((current) => ({
-                                            ...current,
-                                            [post.id]: event.target.value,
-                                          }))
-                                        }
-                                        rows={2}
-                                        maxLength={5000}
-                                        required
-                                        placeholder="Write a comment…"
-                                        className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                                      />
-                                    </label>
-
-                                    <button
-                                      type="submit"
-                                      disabled={
-                                        commentingId === post.id ||
-                                        !(commentDrafts[post.id] || '').trim()
-                                      }
-                                      className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
-                                    >
-                                      {commentingId === post.id
-                                        ? 'Sending…'
-                                        : 'Send'}
-                                    </button>
-                                  </form>
-                                </div>
-                              )}
-                            </>
-                          )}
+                            <div>
+                              <p className="text-sm font-medium text-slate-900">{authorName(post)} {isOwnPost && <span className="text-xs text-slate-400 ml-1">(You)</span>}</p>
+                              <p className="text-xs text-slate-500">{formatDate(post.created_at)}</p>
+                            </div>
+                          </div>
+                          <StatusBadge status={post.status} />
                         </div>
+                        <h3 className="mb-2 text-lg font-semibold text-slate-900">{post.title}</h3>
+                        <p className="whitespace-pre-wrap text-sm text-slate-600 leading-relaxed">{displayedContent}</p>
+                      </div>
+
+                      <div className="bg-slate-50 border-t border-slate-100 px-5 py-4">
+                        {isOwnPost && (post.status === 'draft' || post.status === 'rejected') && (
+                          <div className="mb-4 flex gap-2">
+                            <button onClick={(e) => { e.stopPropagation(); setEditingPost(post); setTitle(post.title); setContent(post.content); setNewPostStatus('draft'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="text-xs font-medium text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded bg-white border border-slate-200 shadow-sm">
+                              Edit Draft
+                            </button>
+                            {post.status === 'draft' && (
+                              <button 
+                                disabled={savingStatusId === post.id}
+                                onClick={(e) => { e.stopPropagation(); void changePostStatus(post, 'under_review'); }} 
+                                className="text-xs font-medium text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded bg-emerald-50 border border-emerald-200 shadow-sm disabled:opacity-50"
+                              >
+                                {savingStatusId === post.id ? 'Submitting...' : 'Submit for Review'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {post.status === 'published' && (
+                          <>
+                            <div className="flex items-center gap-6">
+                              <button onClick={(e) => { e.stopPropagation(); void toggleLike(post); }} className={`flex items-center gap-1.5 text-sm font-medium ${likingId === post.id ? 'opacity-50' : 'text-slate-600 hover:text-rose-600'}`}>
+                                <svg className={`w-4 h-4 ${post.likes_count ? 'text-rose-500' : 'text-slate-400'}`} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" /></svg>
+                                {post.likes_count || 0}
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); toggleId(post.id, setOpenComments); }} className="flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-blue-600">
+                                <svg className="w-4 h-4 text-slate-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" /></svg>
+                                {comments.length}
+                              </button>
+                            </div>
+
+                            {showComments && (
+                              <div className="mt-4 pt-4 border-t border-slate-200">
+                                {comments.length > 0 && (
+                                  <div className="space-y-4 mb-4">
+                                    {comments.map((comment) => (
+                                      <div key={comment.id} className="flex gap-3">
+                                        <div className="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500 shrink-0">{initials(commentName(comment))}</div>
+                                        <div>
+                                          <div className="flex items-baseline gap-2"><span className="text-sm font-medium text-slate-800">{commentName(comment)}</span><span className="text-[10px] text-slate-400">{formatDate(comment.created_at)}</span></div>
+                                          <p className="text-sm text-slate-600 mt-0.5">{comment.content}</p>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                                <form onSubmit={(e) => { e.stopPropagation(); void submitComment(e, post); }} className="flex gap-2">
+                                  <input type="text" value={commentDrafts[post.id] || ''} onChange={(e) => setCommentDrafts((c) => ({ ...c, [post.id]: e.target.value }))} placeholder="Add a comment..." className="flex-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm" />
+                                  <button type="submit" disabled={commentingId === post.id || !commentDrafts[post.id]} className="rounded-md bg-slate-800 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50 shadow-sm">Post</button>
+                                </form>
+                              </div>
+                            )}
+                          </>
+                        )}
                       </div>
                     </article>
                   );
@@ -1033,206 +592,69 @@ export function BlogView({
             )}
           </section>
 
-          <aside className="space-y-4 lg:sticky lg:top-5">
-            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-              <div className="border-b border-slate-100 px-4 py-4">
-                <h2 className="text-base font-bold text-slate-900">
-                  Create a post
-                </h2>
-                <p className="mt-1 text-sm leading-5 text-slate-500">
-                  Save a draft or submit your post for review.
-                </p>
-              </div>
-
-              <form
-                onSubmit={(event) => void savePost(event, newPostStatus)}
-                className="space-y-3 p-4"
-              >
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-slate-700">
-                    Title
-                  </span>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    maxLength={255}
-                    required
-                    placeholder="Post headline"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                  />
-                  <span className="mt-1 block text-right text-[10px] text-slate-400">
-                    {title.length}/255
-                  </span>
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-slate-700">
-                    Message
-                  </span>
-                  <textarea
-                    value={content}
-                    onChange={(event) => setContent(event.target.value)}
-                    maxLength={20000}
-                    rows={6}
-                    required
-                    placeholder="Write your thoughts here…"
-                    className="w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm leading-6 outline-none placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-                  />
-                  <span className="mt-1 block text-right text-[10px] text-slate-400">
-                    {content.length.toLocaleString('en-KE')}/20,000
-                  </span>
-                </label>
-
-                <label className="block">
-                  <span className="mb-1.5 block text-xs font-semibold text-slate-700">
-                    Save as
-                  </span>
-                  <select
-                    value={newPostStatus}
-                    onChange={(event) =>
-                      setNewPostStatus(
-                        event.target.value as 'draft' | 'under_review',
-                      )
-                    }
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-400"
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="under_review">Submit for review</option>
+          <aside className="space-y-6 lg:sticky lg:top-8">
+            <section className="rounded-lg border border-slate-200 bg-white shadow-sm p-5">
+              <h2 className="mb-4 text-base font-semibold text-slate-900">{editingPost ? 'Edit Blog' : 'Compose'}</h2>
+              <form onSubmit={(event) => void savePost(event, newPostStatus)} className="space-y-4">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-600">Title</label>
+                  <input type="text" value={title} onChange={(event) => setTitle(event.target.value)} required className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-600">Content</label>
+                  <textarea value={content} onChange={(event) => setContent(event.target.value)} rows={6} required className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm" />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-slate-600">Action</label>
+                  <select value={newPostStatus} onChange={(event) => setNewPostStatus(event.target.value as 'draft' | 'under_review')} className="w-full rounded-md border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none focus:bg-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 shadow-sm cursor-pointer">
+                    <option value="draft">Save as Draft</option>
+                    <option value="under_review">Submit for Review</option>
                   </select>
-                </label>
-
-                <button
-                  type="submit"
-                  disabled={saving || !title.trim() || !content.trim()}
-                  className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {saving
-                    ? 'Saving…'
-                    : newPostStatus === 'draft'
-                      ? 'Save draft'
-                      : 'Submit for review'}
+                </div>
+                <button type="submit" disabled={saving || !title.trim() || !content.trim()} className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 transition-colors shadow-sm">
+                  {saving ? 'Saving...' : 'Save Blog'}
                 </button>
-
-                <p className="text-xs leading-5 text-slate-400">
-                  Posts are saved through the Katiba News API.
-                </p>
               </form>
             </section>
-
-            <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <h3 className="text-sm font-bold text-slate-900">
-                Post workflow
-              </h3>
-
-              <ol className="mt-3 space-y-3">
-                <WorkflowStep
-                  number="1"
-                  title="Draft"
-                  description="Write and save your work."
-                  color="bg-slate-100 text-slate-700"
-                />
-                <WorkflowStep
-                  number="2"
-                  title="Under review"
-                  description="Submit your post for review."
-                  color="bg-amber-50 text-amber-800"
-                />
-                <WorkflowStep
-                  number="3"
-                  title="Published"
-                  description="Make your post available to readers."
-                  color="bg-emerald-50 text-emerald-700"
-                />
-              </ol>
-            </section>
-
-            <section className="rounded-xl border border-slate-200 bg-white p-4">
-              <h3 className="text-sm font-bold text-slate-900">
-                Community guidelines
-              </h3>
-              <ul className="mt-3 space-y-2 text-xs leading-5 text-slate-600">
-                <li>✓ Respect different perspectives.</li>
-                <li>✓ Share accurate information.</li>
-                <li>✓ Keep discussions constructive.</li>
-                <li>✓ Protect personal information.</li>
-              </ul>
-            </section>
-
-            {onNavigateToArticles && (
-              <button
-                type="button"
-                onClick={onNavigateToArticles}
-                className="w-full rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-left transition hover:bg-blue-100"
-              >
-                <span className="block text-sm font-semibold text-blue-800">
-                  Explore published articles →
-                </span>
-                <span className="mt-1 block text-xs text-blue-700">
-                  Read more from Katiba News.
-                </span>
-              </button>
-            )}
           </aside>
         </div>
-
-        <footer className="mt-9 border-t border-slate-200 py-5 text-center text-xs text-slate-400">
-          Katiba News · Community blog
-        </footer>
       </div>
     </main>
   );
 }
 
-function Stat({
-  label,
+function OverviewCard({
+  title,
   value,
   icon,
+  colorClass,
+  textColor,
+  bgTint,
+  linkText,
+  onClick
 }: {
-  label: string;
-  value: string;
-  icon: string;
-}) {
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-lg text-blue-600">
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-medium text-slate-500">{label}</p>
-        <p className="mt-0.5 text-xl font-bold leading-6 text-slate-900">
-          {value}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function WorkflowStep({
-  number,
-  title,
-  description,
-  color,
-}: {
-  number: string;
   title: string;
-  description: string;
-  color: string;
+  value: string | number;
+  icon: React.ReactNode;
+  colorClass: string; 
+  textColor: string;
+  bgTint: string;
+  linkText: string;
+  onClick: () => void;
 }) {
   return (
-    <li className="flex items-start gap-3">
-      <span
-        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${color}`}
-      >
-        {number}
-      </span>
-      <div>
-        <p className="text-xs font-semibold text-slate-800">{title}</p>
-        <p className="mt-0.5 text-xs leading-5 text-slate-500">
-          {description}
-        </p>
+    <div className={`rounded-xl bg-white border-l border-r border-b border-slate-200 border-t-4 ${colorClass} p-5 flex flex-col justify-between h-36 shadow-sm`}>
+      <div className="flex justify-between items-start">
+        <h3 className="text-slate-600 font-medium text-sm">{title}</h3>
+        <div className={`w-7 h-7 rounded-full flex items-center justify-center ${bgTint} ${textColor}`}>
+          {icon}
+        </div>
       </div>
-    </li>
+      <p className="text-3xl font-bold text-slate-900 mt-1 mb-3">{value}</p>
+      <button onClick={onClick} className={`text-sm font-medium hover:opacity-80 text-left transition-opacity ${textColor} flex items-center gap-1 w-max`}>
+        {linkText} <span>&rarr;</span>
+      </button>
+    </div>
   );
 }
 

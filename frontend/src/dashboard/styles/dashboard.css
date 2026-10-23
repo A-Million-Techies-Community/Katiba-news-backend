@@ -396,3 +396,46 @@
   opacity: .85;
 }
 
+
+/* Shared navigation supports in-workspace tabs and links to other content tools. */
+.nd-sidebar .nd-nav-link { display: block; padding: 13px; border-radius: 7px; color: var(--nd-sidebar-text); text-decoration: none; font-weight: 600; }
+.nd-sidebar .nd-nav-link:hover { background: var(--nd-sidebar-active-bg); color: var(--nd-sidebar-active-text); }
+.nd-sidebar .nd-nav-link[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+.nd-sidebar nav { width: 100%; }
+.nd-sidebar { overflow-y: auto; }
+.nd-sidebar nav { display: grid; gap: 6px; }
+@media (max-width: 680px) {
+  .nd-sidebar nav { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+  .nd-sidebar nav button, .nd-sidebar .nd-nav-link { padding: 10px; font-size: 12px; }
+}
+
+.nd-shell .nd-published { background: var(--nd-accent-soft); color: var(--nd-accent); }
+:root[data-workspace-density="compact"] .nd-shell :is(.nd-panel, .ad-panel, .ad-chart-card, .ad-stat) { padding: 16px; }
+:root[data-workspace-motion="reduce"] .nd-shell *, :root[data-workspace-motion="reduce"] .nd-shell *::before, :root[data-workspace-motion="reduce"] .nd-shell *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+
+.nd-shell th { background: var(--nd-soft); color: var(--nd-muted); }
+.nd-shell td { border-color: var(--nd-border); }
+
+/* News Author owns the story and category navigation. */
+.nd-sidebar .nd-nav-children {
+  margin: 4px 0 10px 22px;
+  padding-left: 10px;
+  border-left: 1px solid var(--nd-sidebar-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nd-sidebar .nd-nav-children button {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 12px;
+  text-align: left;
+}
+.nd-sidebar nav > div > button { width: 100%; text-align: left; }
+@media (max-width: 680px) {
+  .nd-sidebar .nd-nav-group { grid-column: 1 / -1; }
+}
+.nd-sidebar .nd-nav-parent { display: flex; align-items: stretch; }
+.nd-sidebar .nd-nav-parent > :first-child { flex: 1; min-width: 0; text-align: left; }
+.nd-sidebar .nd-nav-parent .nd-nav-disclosure { flex: 0 0 34px; padding: 8px; text-align: center; font-size: 16px; }
+.nd-sidebar .nd-nav-children[hidden] { display: none; }

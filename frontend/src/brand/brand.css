@@ -1,0 +1,5 @@
+.katiba-brand { display: inline-flex; align-items: center; gap: 10px; color: inherit; font-family: Georgia, 'Times New Roman', serif; font-size: inherit; font-weight: 700; line-height: 1.2; white-space: nowrap; vertical-align: middle; }
+.katiba-brand img { display: block; width: 36px; height: 36px; flex: 0 0 auto; }
+.nd-brand .katiba-brand { font-size: 21px; gap: 8px; }
+.nd-brand .katiba-brand img { width: 30px; height: 30px; }
+@media (max-width: 600px) { .news-logo .katiba-brand { gap: 8px; } .news-logo .katiba-brand img { width: 30px; height: 30px; } }

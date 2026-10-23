@@ -2,28 +2,13 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from django.contrib.admin.sites import site
 from .models import User
-from .serializers import UserRegistrationSerializer
 
 
 class RegistrationRoleTests(TestCase):
-    def test_public_signup_cannot_choose_newsroom_roles(self):
-        client = APIClient()
-        for role in ('AUTHOR', 'EDITOR'):
-            response = client.post('/api/users/register/', {
-                'username': role.lower(), 'email': f'{role}@example.org',
-                'password': 'Testing-password-123', 'role': role}, format='json')
-            self.assertEqual(response.status_code, 400)
+    def test_public_signup_is_disabled(self):
+        response = APIClient().post('/api/users/register/', {'username': 'visitor', 'password': 'Testing-password-123'}, format='json')
+        self.assertEqual(response.status_code, 404)
         self.assertFalse(User.objects.exists())
-
-    def test_signup_remains_reader_even_with_privilege_flags(self):
-        serializer = UserRegistrationSerializer(data={'username': 'reader', 'email': 'reader@example.org',
-            'password': 'Testing-password-123', 'is_staff': True, 'is_superuser': True})
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        user = serializer.save()
-        self.assertEqual(user.role, 'READER')
-        self.assertFalse(user.is_staff)
-        self.assertFalse(user.is_superuser)
-        self.assertTrue(user.check_password('Testing-password-123'))
 
     def test_only_superusers_can_administer_accounts(self):
         from django.test import RequestFactory
@@ -68,12 +53,6 @@ class AuthenticationLifecycleTests(TestCase):
         self.client.credentials()
         self.assertEqual(self.client.post('/api/users/token/refresh/', {'refresh': tokens['refresh']}, format='json').status_code, 401)
         self.assertEqual(self.client.post('/api/users/login/', {'username': 'lifecycle', 'password': 'A-strong-Original-734!'}, format='json').status_code, 401)
-
-    def test_registration_applies_configured_password_validators(self):
-        for password in ('password', '123456789012'):
-            response = self.client.post('/api/users/register/', {'username': 'newperson', 'email': 'new@example.org', 'password': password}, format='json')
-            self.assertEqual(response.status_code, 400)
-            self.assertIn('password', response.data)
 
     def test_password_recovery_is_private_single_use_and_revokes_tokens(self):
         from django.test import override_settings

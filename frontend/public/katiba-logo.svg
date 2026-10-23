@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <title>Katiba News</title>
+  <rect width="64" height="64" rx="12" fill="#0D1C21"/>
+  <path d="M14 14h9v36h-9z" fill="#F5F1EB"/>
+  <path d="M28 32 44 14h12L39 32l17 18H44L28 32Z" fill="#EF7651"/>
+</svg>

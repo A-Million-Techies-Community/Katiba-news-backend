@@ -1,0 +1,20 @@
+.ad-shell .ad-profile-content { max-width:1060px; margin:0 auto; }
+.ad-shell .ad-profile-content .ad-profile-hero { padding:30px; gap:20px; border-radius:16px; margin-bottom:24px; background:var(--surface); }
+.ad-shell .ad-profile-hero .ad-avatar-large { width:72px; height:72px; border-radius:18px; font-size:24px; flex-shrink:0; }
+.ad-shell .ad-profile-hero h2 { font-size:26px; line-height:1.3; letter-spacing:-.7px; margin:8px 0; }
+.ad-shell .ad-profile-hero p { line-height:1.7; }
+.ad-shell .ad-profile-section { padding:28px 30px; border:1px solid var(--border); border-radius:16px; background:var(--surface); margin-bottom:20px; }
+.ad-shell .ad-profile-section > h3 { margin:0 0 24px; padding-bottom:16px; border-bottom:1px solid var(--border); font-size:18px; letter-spacing:-.3px; color:var(--ink); }
+.ad-shell .ad-profile-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px 30px; }
+.ad-shell :is(.ad-profile-field,.ad-profile-edit-field) { min-width:0; display:flex; flex-direction:column; gap:8px; }
+.ad-shell .ad-profile-grid .wide { grid-column:1 / -1; }
+.ad-shell :is(.ad-profile-field > span,.ad-profile-edit-label) { color:var(--muted); font-size:12px; font-weight:600; line-height:1.5; }
+.ad-shell .ad-profile-field p { color:var(--ink); margin:0; font-size:14px; line-height:1.8; white-space:pre-wrap; overflow-wrap:anywhere; }
+.ad-shell .ad-profile-field a { color:var(--green); font-size:14px; line-height:1.8; overflow-wrap:anywhere; }
+.ad-shell .ad-profile-input { width:100%; padding:12px 14px; min-height:44px; background:var(--surface); border:1px solid var(--border); border-radius:9px; color:var(--ink); font-size:14px; line-height:1.6; }
+.ad-shell .ad-profile-textarea { min-height:120px; resize:vertical; }
+.ad-shell .ad-profile-edit-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:12px; padding:20px 24px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
+@media (max-width:768px) { .ad-shell .ad-profile-content .ad-profile-hero { flex-wrap:wrap; padding:22px; } .ad-shell .ad-profile-hero-actions { width:100%; } .ad-shell .ad-profile-section { padding:22px; } .ad-shell .ad-profile-grid { grid-template-columns:1fr; gap:20px; } }
+
+.ad-shell .ad-profile-field { padding:16px; border:1px solid var(--border); border-radius:10px; background:var(--surface-alt); }
+.ad-shell .ad-profile-edit-form { display:grid; gap:0; }
