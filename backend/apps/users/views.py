@@ -95,7 +95,12 @@ class ProfilePictureView(APIView):
         profile, _ = AuthorProfile.objects.get_or_create(user=request.user)
         serializer = ProfilePictureSerializer(profile, data=request.data)
         serializer.is_valid(raise_exception=True)
+        previous_name = profile.profile_picture.name
+        storage = profile.profile_picture.storage
         serializer.save()
+        if previous_name and previous_name != profile.profile_picture.name:
+            from django.db import transaction
+            transaction.on_commit(lambda: storage.delete(previous_name))
         request.user._state.fields_cache.pop('author_profile', None)
         return Response({'profile_picture_url': profile.profile_picture.url})
 

@@ -67,6 +67,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class ProfilePictureSerializer(serializers.ModelSerializer):
     profile_picture = serializers.ImageField(required=True)
+
     class Meta:
         model = AuthorProfile
         fields = ('profile_picture',)
@@ -88,7 +89,6 @@ class AuthorProfileSerializer(serializers.ModelSerializer):
 
     def get_profile_picture_url(self, profile):
         return profile.profile_picture.url if profile.profile_picture else None
-
 
     class Meta:
 

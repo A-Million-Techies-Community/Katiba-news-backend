@@ -93,5 +93,8 @@ class ProfilePictureTests(TestCase):
     def test_replacement_has_a_new_url(self):
         self.client.force_authenticate(self.writer)
         first = self.client.put(self.url, {'profile_picture': photo()}, format='multipart')
-        second = self.client.put(self.url, {'profile_picture': photo()}, format='multipart')
+        old = AuthorProfile.objects.get(user=self.writer).profile_picture
+        with self.captureOnCommitCallbacks(execute=True):
+            second = self.client.put(self.url, {'profile_picture': photo()}, format='multipart')
+        self.assertFalse(old.storage.exists(old.name))
         self.assertNotEqual(first.data['profile_picture_url'], second.data['profile_picture_url'])
