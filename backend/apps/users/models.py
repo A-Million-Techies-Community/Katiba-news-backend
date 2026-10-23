@@ -1,3 +1,6 @@
+from uuid import uuid4
+from pathlib import Path
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -21,12 +24,18 @@ class User(AbstractUser):
 
 
 
+def profile_photo_path(instance, filename):
+    return f"profiles/{instance.user_id}/{uuid4().hex}{Path(filename).suffix.lower()}"
+
+
 class AuthorProfile(models.Model):
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
         related_name="author_profile",
     )
+
+    profile_picture = models.ImageField(upload_to=profile_photo_path, blank=True)
 
     # Basic author information
     professional_title = models.CharField(max_length=120)

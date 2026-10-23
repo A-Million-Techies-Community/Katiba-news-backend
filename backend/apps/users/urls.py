@@ -9,6 +9,7 @@ from .views import (
     AuthorDashboardView,
     AuthorProfileView,
     MeView,
+    ProfilePictureView,
 )
 
 
@@ -16,6 +17,7 @@ from .settings_views import AuthorPasswordChangeView, AuthorSettingsView
 
 
 urlpatterns = [
+    path("me/photo/", ProfilePictureView.as_view(), name="profile-picture"),
     path('staff-applications/', SubmitApplication.as_view(), name='staff-application'),
     path('staff-applications/review/', ApplicationQueue.as_view(), name='staff-application-queue'),
     path('staff-applications/<int:pk>/decision/', ApplicationDecision.as_view(), name='staff-application-decision'),

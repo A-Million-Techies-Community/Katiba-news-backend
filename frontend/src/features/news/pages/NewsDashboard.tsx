@@ -1,3 +1,6 @@
+import { ProfilePhoto } from '../../../dashboard/components/ProfilePhoto'
+import './newsroom-design.css'
+import { FileText, Clock3, CircleCheck, RotateCcw, Globe2 } from 'lucide-react'
 import { DashboardLayout, ThemeToggle } from '../../../dashboard'
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { ComponentProps, FormEvent } from 'react'
@@ -93,6 +96,14 @@ const authorProfileFields: {
   { key: 'conflicts_of_interest', label: 'Professional conflicts of interest', multiline: true },
   { key: 'additional_information', label: 'Additional information', multiline: true },
 ]
+
+const profileSections = [
+  { title: 'About you', description: 'Your byline, contact details, and professional introduction.', keys: ['professional_title', 'preferred_byline', 'organisation', 'location', 'phone_number', 'biography'] },
+  { title: 'Experience & portfolio', description: 'Your background and the work you want to share.', keys: ['years_of_experience', 'highest_education', 'journalism_training', 'previous_media_experience', 'portfolio_url', 'linkedin_url', 'published_work'] },
+  { title: 'Reporting interests', description: 'The topics, communities, and formats you cover.', keys: ['areas_of_expertise', 'primary_expertise', 'secondary_expertise', 'reporting_beats', 'content_types', 'languages', 'geographic_coverage', 'topics_of_interest'] },
+  { title: 'Practice & standards', description: 'Your approach to accurate, responsible journalism.', keys: ['writing_experience', 'investigative_experience', 'fact_checking_experience', 'source_verification_experience', 'motivation_to_join', 'conflicts_of_interest', 'additional_information'] },
+]
+const statusIcons = { draft: FileText, submitted: Clock3, approved: CircleCheck, rejected: RotateCcw, published: Globe2 }
 
 export default function NewsDashboard() {
   const [route, setRoute] = useState(window.location.pathname)
@@ -291,15 +302,14 @@ export default function NewsDashboard() {
     void mutate(() => api(`/api/news/stories/${selected.id}/${action}/`, 'POST', action === 'submit' || action === 'publish' ? {} : { feedback }), action === 'submit' ? 'Sent to the editor.' : `Story ${action === 'approve' ? 'approved' : action === 'publish' ? 'published' : 'returned'}.`)
   }
 
-  return <DashboardLayout workspace={mode === 'editor' ? 'EDITORIAL WORKSPACE' : 'AUTHOR WORKSPACE'} items={[
+  return <DashboardLayout className="newsroom-workspace" workspace={mode === 'editor' ? 'EDITORIAL WORKSPACE' : 'AUTHOR WORKSPACE'} items={[
     ...(mode === 'writer' ? [
       { id: 'author-dashboard', label: '⌂ Overview', href: '/author/dashboard' },
-      { id: 'articles', label: '▤ Articles', href: '/author/dashboard?tab=articles' },
-      { id: 'blogs', label: '✎ Blogs', href: '/author/dashboard?tab=blogs' },
     ] : []),
     { id: 'overview', label: mode === 'writer' ? '▧ News Author' : '⌂ Dashboard' },
     { id: 'stories', label: mode === 'writer' ? 'My stories' : 'Submission queue', parentId: mode === 'writer' ? 'overview' : undefined },
     { id: 'categories', label: 'Categories', parentId: mode === 'writer' ? 'overview' : undefined },
+    ...(mode === 'writer' ? [{ id: 'articles', label: 'Articles', href: '/author/dashboard?tab=articles' }, { id: 'blogs', label: 'Blogs', href: '/author/dashboard?tab=blogs' }] : []),
     ...(mode === 'editor' ? [{ id: 'content', label: '▤ Articles & blogs' }, { id: 'comments', label: '☏ Comments' }, { id: 'media', label: '▣ Media library' }] : []),
     ...(mode === 'writer' ? [
       { id: 'analytics', label: '▥ Analytics', href: '/author/dashboard?tab=analytics' },
@@ -309,28 +319,21 @@ export default function NewsDashboard() {
       { id: 'profile', label: '♙ My profile' },
     ] : []),
   ]} activeItem={tab} onNavigate={navigate} disabled={busy || uploading}>
-      <header className="nd-top"><form className="nd-global-search" onSubmit={event => { event.preventDefault(); navigate('stories') }}><label htmlFor="newsroom-search">Search newsroom</label><input id="newsroom-search" type="search" placeholder="Search your news, headlines, or topics…" value={search} disabled={busy || uploading} onChange={event => setSearch(event.target.value)} /><button disabled={busy || uploading} aria-label="Search news">⌕</button></form><div className="nd-account"><ThemeToggle /><button
-  type="button"
-  className="nd-account-profile"
-  aria-label="Open your author profile"
-  title="View your profile"
-  disabled={busy || uploading || mode !== 'writer'}
-  onClick={() => navigate('profile')}
->
-  <b className="nd-avatar">{(access?.username || 'N').slice(0, 1).toUpperCase()}</b>
+      <header className="nd-top"><nav className="nd-breadcrumbs" aria-label="Breadcrumb"><a href="/">Katiba News</a><span aria-hidden="true">/</span>{tab === 'overview' ? <span aria-current="page">Dashboard</span> : <><button disabled={busy || uploading} onClick={() => navigate('overview')}>Dashboard</button><span aria-hidden="true">/</span>{composing ? <><button disabled={busy || uploading} onClick={() => navigate('stories')}>{mode === 'writer' ? 'My stories' : 'Submission queue'}</button><span aria-hidden="true">/</span><span className="nd-current-crumb" aria-current="page">{selected?.title || 'New story'}{preview ? ' · Preview' : ''}</span></> : <span aria-current="page">{tab === 'profile' ? 'Profile' : tab === 'categories' ? 'Categories' : mode === 'writer' ? 'My stories' : 'Review desk'}</span>}</>}</nav><form className="nd-global-search" onSubmit={event => { event.preventDefault(); navigate('stories') }}><label htmlFor="newsroom-search">Search newsroom</label><input id="newsroom-search" type="search" placeholder="Search your news, headlines, or topics…" value={search} disabled={busy || uploading} onChange={event => setSearch(event.target.value)} /><button disabled={busy || uploading} aria-label="Search news">⌕</button></form><div className="nd-account"><ThemeToggle /><div className="nd-account-profile">
+  <ProfilePhoto initials={(access?.username || 'N').slice(0, 1).toUpperCase()} />
   <span>
     <strong>{access?.username || 'Newsroom'}</strong>
-    <small>{mode === 'writer' ? 'Author · View profile' : 'Editor'}</small>
+    <small>{mode === 'writer' ? 'Author' : 'Editor'}</small>
   </span>
-</button>{access && <button disabled={busy || uploading} onClick={() => void signOut('/workspace')}>Sign out</button>}</div></header>
-      <nav className="nd-breadcrumbs" aria-label="Breadcrumb"><a href="/">Katiba News</a><span aria-hidden="true">/</span>{tab === 'overview' ? <span aria-current="page">Dashboard</span> : <><button disabled={busy || uploading} onClick={() => navigate('overview')}>Dashboard</button><span aria-hidden="true">/</span>{composing ? <><button disabled={busy || uploading} onClick={() => navigate('stories')}>{mode === 'writer' ? 'My stories' : 'Submission queue'}</button><span aria-hidden="true">/</span><span className="nd-current-crumb" aria-current="page">{selected?.title || 'New story'}{preview ? ' · Preview' : ''}</span></> : <span aria-current="page">{tab === 'profile' ? 'Profile' : tab === 'categories' ? 'Categories' : mode === 'writer' ? 'My stories' : 'Review desk'}</span>}</>}</nav>
+</div>{access && <button disabled={busy || uploading} onClick={() => void signOut('/workspace')}>Sign out</button>}</div></header>
+
       {loading ? <p role="status">Loading your dashboard…</p> : <>
-        <div className="nd-heading"><div><p className="nd-eyebrow">{mode === 'writer' ? 'YOUR WORDS, YOUR WORKSPACE' : 'THE EDITORIAL DESK'}</p><h1>{composing ? (mode === 'editor' ? selected?.status === 'submitted' ? 'Review submission' : 'Editorial decision' : selected ? 'Edit story' : 'Create a story') : tab === 'categories' ? 'News categories' : tab === 'stories' ? (mode === 'writer' ? 'My stories' : 'Review desk') : `Welcome back, ${access?.username || 'there'}!`}</h1><p>{mode === 'writer' ? 'Write, refine, and follow your stories through review.' : 'Review submissions, refine the reporting, and make your decision.'}</p></div>{access && mode === 'writer' && !composing && tab !== 'categories' && <button className="nd-primary" disabled={busy || uploading} onClick={() => open(null)}>+ Create news</button>}</div>
+        <div className="nd-heading"><div><p className="nd-eyebrow">{mode === 'writer' ? 'YOUR WORDS, YOUR WORKSPACE' : 'THE EDITORIAL DESK'}</p><h1>{composing ? (mode === 'editor' ? selected?.status === 'submitted' ? 'Review submission' : 'Editorial decision' : selected ? 'Edit story' : 'Create a story') : tab === 'profile' ? 'My profile' : tab === 'content' ? 'Articles & blogs' : tab === 'comments' ? 'Reader comments' : tab === 'media' ? 'Media library' : tab === 'categories' ? 'News categories' : tab === 'stories' ? (mode === 'writer' ? 'My stories' : 'Review desk') : `Welcome back, ${access?.username || 'there'}!`}</h1><p>{tab === 'profile' ? 'Your byline, experience, and reporting interests, all in one place.' : mode === 'writer' ? 'Write, refine, and follow your stories through review.' : 'Review submissions, refine the reporting, and make your decision.'}</p></div>{access && mode === 'writer' && !composing && ['overview', 'stories'].includes(tab) && <button className="nd-primary" disabled={busy || uploading} onClick={() => open(null)}>+ Create news</button>}</div>
         {error && <div className="nd-error" role="alert">{error}</div>}
         {notice && <div className="nd-notice" role="status">{notice}</div>}
         {!access ? <section className="nd-panel nd-empty"><h2>Your newsroom account is required</h2><p>Use the existing sign-in page with your Writer (Author) or Editor account.</p><a href="/">Go to Katiba sign-in →</a></section> : <>
           {tab === 'content' && mode === 'editor' ? <ContentReview /> : tab === 'comments' || tab === 'media' ? <WorkspaceTools key={tab} tool={tab} /> : tab !== 'categories' ? <>
-            {!composing && tab === 'overview' && <section className="nd-stats">{(mode === 'writer' ? statuses : ['submitted', 'approved', 'rejected', 'published']).map(status => <button key={status} className={`nd-stat-${status}`} onClick={() => { setFilter(status); navigate('stories') }}><span>{status === 'submitted' ? 'Awaiting review' : status === 'rejected' ? 'Needs changes' : status}</span><strong>{scoped.filter(story => story.status === status).length}</strong><small>View stories →</small></button>)}</section>}
+            {!composing && tab === 'overview' && <section className="nd-stats">{(mode === 'writer' ? statuses : ['submitted', 'approved', 'rejected', 'published']).map(status => <button key={status} className={`nd-stat-${status}`} onClick={() => { setFilter(status); navigate('stories') }}><span>{status === 'submitted' ? 'Awaiting review' : status === 'rejected' ? 'Needs changes' : status}</span><strong>{scoped.filter(story => story.status === status).length}</strong><small>View stories →</small><span className={`nd-stat-symbol nd-${status}`} aria-hidden="true">{(() => { const Icon = statusIcons[status as keyof typeof statusIcons]; return <Icon size={21} strokeWidth={1.8} /> })()}</span></button>)}</section>}
             {tab === 'overview' && mode === 'writer' && <div className="nd-overview-grid">
               <section className="nd-panel nd-recent"><div className="nd-panel-heading"><div><h2>{mode === 'writer' ? 'Your recent stories' : 'Latest submissions'}</h2><p>A little progress, every day.</p></div><button onClick={() => navigate('stories')}>View all →</button></div>
                 {!scoped.length ? <div className="nd-empty"><h3>{mode === 'writer' ? 'Your voice belongs here' : 'Your review desk is up to date'}</h3><p>{mode === 'writer' ? 'Start your first story and bring a fresh perspective.' : 'Stories will appear when writers submit them for review.'}</p></div> : [...scoped].sort((a, b) => b.updated_at.localeCompare(a.updated_at)).slice(0, 5).map(story => <button className="nd-story-row" key={story.id} onClick={() => open(story)}><span className="nd-story-icon">▤</span><span><strong>{story.title}</strong><small>{story.category_name} · {story.author_username}</small></span><span className={`nd-badge nd-${story.status}`}>{story.status}</span><span>→</span></button>)}
@@ -356,8 +359,11 @@ export default function NewsDashboard() {
                 <p>Your profile could not be loaded. Check the error message above and try again.</p>
               ) : (
                 <form className="nd-profile-form" onSubmit={saveAuthorProfile}>
-                  <div className="nd-profile-grid">
-                    {authorProfileFields.map(field => (
+                  <div className="nd-profile-summary"><ProfilePhoto initials={(authorProfile.preferred_byline || access.username).slice(0, 2).toUpperCase()} large /><div><h3>{authorProfile.preferred_byline || access.username}</h3><p>{authorProfile.professional_title || 'Katiba News contributor'}{authorProfile.location ? ` · ${authorProfile.location}` : ''}</p></div></div>
+                  {profileSections.map((section, index) => <section className="nd-profile-section" key={section.title}>
+                    <header><span className="nd-profile-step">0{index + 1}</span><div><h3>{section.title}</h3><p>{section.description}</p></div></header>
+                    <div className="nd-profile-grid">
+                    {authorProfileFields.filter(field => section.keys.includes(field.key)).map(field => (
                       <label
                         className={`nd-profile-field${field.multiline ? ' wide' : ''}`}
                         key={field.key}
@@ -385,7 +391,8 @@ export default function NewsDashboard() {
                         )}
                       </label>
                     ))}
-                  </div>
+                    </div>
+                  </section>)}
 
                   <label className="nd-profile-agreement">
                     <input

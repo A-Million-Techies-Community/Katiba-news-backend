@@ -1,4 +1,5 @@
 export type WorkspaceAccount = {
+  profile_picture_url?: string | null
   username: string
   role: 'Author' | 'Editor' | 'Administrator' | 'Superuser' | null
   workspace_url: string | null
@@ -6,7 +7,7 @@ export type WorkspaceAccount = {
 export function saveSession(account: WorkspaceAccount, tokens: { access: string; refresh?: string }) {
   sessionStorage.removeItem('katibaEditorSession')
   sessionStorage.removeItem('katibaAdminSession')
-  sessionStorage.setItem('katibaUserSession', JSON.stringify({ username: account.username, role: account.role, ...tokens }))
+  sessionStorage.setItem('katibaUserSession', JSON.stringify({ username: account.username, role: account.role, profile_picture_url: account.profile_picture_url || null, ...tokens }))
 }
 
 /** Shared token refresh and revocation for all account workspaces. */

@@ -1,3 +1,5 @@
+import { ProfilePhoto } from '../../dashboard/components/ProfilePhoto'
+import './profile-design.css'
 import { signOut } from '../../auth/session'
 import { NavigationIcon } from '../../dashboard/components/NavigationIcon'
 import { ThemeToggle } from '../../dashboard/components/ThemeToggle'
@@ -983,204 +985,12 @@ function AuthorDashboard() {
 
     return (
       <div className="ad-profile-content">
-        <style>{`
-          /* PROFILE DISPLAY REFINEMENT */
-          .ad-profile-content {
-            display: grid;
-            gap: 16px;
-            min-width: 0;
-          }
-          .ad-profile-content .ad-profile-hero {
-            display: flex;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 18px;
-            padding: 22px;
-            margin: 0;
-            border: 1px solid var(--nd-border, #e2ebe6);
-            border-radius: 15px;
-            background: var(--nd-accent-soft, #e6f6ef);
-            color: var(--nd-text, #20332c);
-          }
-          .ad-profile-content .ad-profile-hero-copy {
-            flex: 1;
-            min-width: 0;
-          }
-          .ad-profile-content .ad-profile-hero h2 {
-            margin: 6px 0;
-            font-size: clamp(19px, 2.4vw, 25px);
-            line-height: 1.35;
-            overflow-wrap: anywhere;
-          }
-          .ad-profile-content .ad-profile-hero p {
-            margin: 0;
-            color: var(--nd-muted, #788780);
-            font-size: 12px;
-            line-height: 1.65;
-          }
-          .ad-profile-content .ad-profile-hero-actions {
-            display: flex;
-            gap: 9px;
-            flex-wrap: wrap;
-          }
-          .ad-profile-content .ad-profile-section {
-            min-width: 0;
-            margin: 0;
-            padding: 20px;
-            border: 1px solid var(--nd-border, #e2ebe6);
-            border-radius: 14px;
-            background: var(--nd-surface, #ffffff);
-          }
-          .ad-profile-content .ad-profile-section h3 {
-            margin: 0 0 16px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--nd-border, #e2ebe6);
-            font-size: 14px;
-            font-weight: 750;
-            color: var(--nd-text, #20332c);
-          }
-          .ad-profile-content .ad-profile-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            align-items: start;
-            gap: 12px;
-          }
-          .ad-profile-content .ad-profile-field {
-            min-width: 0;
-            height: 100%;
-            box-sizing: border-box;
-            padding: 14px;
-            border: 1px solid var(--nd-border, #e5ece8);
-            border-radius: 10px;
-            background: var(--nd-soft, #f7f9f8);
-          }
-          .ad-profile-content .ad-profile-field-wide {
-            grid-column: 1 / -1;
-          }
-          .ad-profile-content .ad-profile-field > span {
-            display: block;
-            margin-bottom: 7px;
-            color: var(--nd-muted, #788780);
-            font-size: 10px;
-            font-weight: 750;
-            letter-spacing: .04em;
-            text-transform: uppercase;
-          }
-          .ad-profile-content .ad-profile-field p,
-          .ad-profile-content .ad-profile-field a {
-            display: block;
-            margin: 0;
-            color: var(--nd-text, #20332c);
-            font-size: 13px;
-            line-height: 1.8;
-            overflow-wrap: anywhere;
-            white-space: pre-wrap;
-          }
-          .ad-profile-content .ad-profile-field a {
-            color: var(--nd-accent, #087f68);
-            text-underline-offset: 3px;
-          }
-          .ad-profile-content .ad-profile-edit-form {
-            display: grid;
-            gap: 14px;
-          }
-          .ad-profile-content .ad-profile-edit-field-wide {
-            grid-column: 1 / -1;
-          }
-          .ad-profile-content .ad-profile-edit-label {
-            margin-bottom: 7px;
-            color: var(--nd-muted, #788780);
-            font-size: 11px;
-            font-weight: 750;
-          }
-          .ad-profile-content .ad-profile-input {
-            box-sizing: border-box;
-            width: 100%;
-            max-width: 100%;
-            min-width: 0;
-            padding: 11px 12px;
-            border: 1px solid var(--nd-border, #dce6e0);
-            border-radius: 9px;
-            background: var(--nd-surface, #ffffff);
-            color: var(--nd-text, #20332c);
-            font-size: 13px;
-            line-height: 1.7;
-          }
-          .ad-profile-content .ad-profile-input:focus {
-            outline: 2px solid var(--nd-accent, #087f68);
-            outline-offset: 1px;
-          }
-          .ad-profile-content .ad-profile-textarea {
-            min-height: 135px;
-            resize: vertical;
-          }
-          .ad-profile-content .ad-profile-edit-actions {
-            display: flex;
-            justify-content: flex-end;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 4px;
-            padding-top: 16px;
-            border-top: 1px solid var(--nd-border, #e2ebe6);
-          }
-          /* PROFILE HEADER CONTRAST FIX */
-          .ad-profile-content .ad-profile-hero {
-            background: #e4f5ed !important;
-            color: #20332c !important;
-          }
-          .ad-profile-content .ad-profile-hero .ad-eyebrow {
-            color: #00896c !important;
-          }
-          .ad-profile-content .ad-profile-hero h2 {
-            color: #20332c !important;
-            opacity: 1 !important;
-          }
-          .ad-profile-content .ad-profile-hero p {
-            color: #63786d !important;
-            opacity: 1 !important;
-          }
-          .ad-profile-content .ad-profile-hero .ad-button-light {
-            background: #ffffff !important;
-            color: #20332c !important;
-            border: 1px solid #c9d8d0 !important;
-            opacity: 1 !important;
-          }
-          .ad-profile-content .ad-profile-hero .ad-button-light:disabled {
-            color: #52665c !important;
-            opacity: 1 !important;
-          }
 
-@media (max-width: 720px) {
-            .ad-profile-content .ad-profile-hero {
-              align-items: flex-start;
-              padding: 16px;
-            }
-            .ad-profile-content .ad-profile-hero-actions {
-              width: 100%;
-            }
-            .ad-profile-content .ad-profile-hero-actions .ad-button {
-              flex: 1;
-            }
-            .ad-profile-content .ad-profile-section {
-              padding: 15px;
-            }
-            .ad-profile-content .ad-profile-grid {
-              grid-template-columns: minmax(0, 1fr);
-            }
-            .ad-profile-content .ad-profile-field-wide,
-            .ad-profile-content .ad-profile-edit-field-wide {
-              grid-column: auto;
-            }
-            .ad-profile-content .ad-profile-edit-actions .ad-button {
-              flex: 1;
-            }
-          }
-        `}</style>
         {profileSaveMessage && <div className="ad-alert ad-alert-success" role="status">{profileSaveMessage}</div>}
         {profileSaveError && <div className="ad-alert ad-alert-error" role="alert">{profileSaveError}</div>}
 
         <div className="ad-profile-hero">
-          <div className="ad-avatar ad-avatar-large">{initials || 'A'}</div>
+          <ProfilePhoto initials={initials || 'A'} large />
           <div className="ad-profile-hero-copy">
             <span className="ad-eyebrow">AUTHOR PROFILE</span>
             <h2>{authorName}</h2>
@@ -1202,7 +1012,7 @@ function AuthorDashboard() {
                     const value = profileDraft[field]; const inputValue = typeof value === 'string' || typeof value === 'number' ? String(value) : ''; const label = PROFILE_LABELS[field] || String(field)
                     const inputType = field === 'email' ? 'email' : field === 'phone_number' ? 'tel' : field === 'portfolio_url' || field === 'linkedin_url' ? 'url' : field === 'years_of_experience' ? 'number' : 'text'
                     return (
-                      <label className={`ad-profile-edit-field ${LONG_TEXT_FIELDS.has(field) ? "ad-profile-edit-field-wide" : ""}`} key={field}>
+                      <label className={`ad-profile-edit-field${LONG_TEXT_FIELDS.has(field) ? ' wide' : ''}`} key={field}>
                         <span className="ad-profile-edit-label">{label}</span>
                         {LONG_TEXT_FIELDS.has(field) ? (
                           <textarea className="ad-profile-input ad-profile-textarea" value={inputValue} onChange={(event) => updateProfileField(field, event.target.value)} placeholder={`Enter ${label.toLowerCase()}`} rows={4} />
@@ -1231,7 +1041,7 @@ function AuthorDashboard() {
                     {fields.map((field) => {
                       const savedValue = profile[field]; const value = field === 'email' && (savedValue === undefined || savedValue === null || savedValue === '') ? (account?.email || savedValue) : savedValue; const label = PROFILE_LABELS[field] || String(field)
                       return (
-                        <div className={`ad-profile-field ${LONG_TEXT_FIELDS.has(field) ? "ad-profile-field-wide" : ""}`} key={field}>
+                        <div className={`ad-profile-field${LONG_TEXT_FIELDS.has(field) ? ' wide' : ''}`} key={field}>
                           <span>{label}</span>
                           {typeof value === 'string' && /^https?:\/\//i.test(value) ? <a href={value} target="_blank" rel="noreferrer">{value}</a> : <p>{value === undefined || value === null || value === '' ? 'Not provided' : displayValue(value)}</p>}
                         </div>
@@ -1699,14 +1509,14 @@ function AuthorDashboard() {
       <style>{`
         .ad-shell {
           /* Light Mode Defaults - Matching Image Reference */
-          --ink: #182b26;
-          --muted: #788780;
+          --ink: var(--workspace-text);
+          --muted: var(--workspace-muted);
           --green: #087f68;
           --green-dark: #066650;
-          --border: #e8ecea;
-          --surface: #fff;
-          --surface-alt: #fff;
-          --bg: #f9fbfb;
+          --border: var(--workspace-border);
+          --surface: var(--workspace-surface);
+          --surface-alt: var(--workspace-soft);
+          --bg: var(--workspace-bg);
           
           /* Fixed Dark Sidebar Theme - Detached from Light/Dark mode */
           --sidebar-bg: #142925;
@@ -1727,12 +1537,12 @@ function AuthorDashboard() {
 
         /* Dark Mode Overrides for Main Content */
         .ad-shell.dark {
-          --ink: #e8efeb;
-          --muted: #8fa59b;
-          --border: #2a3d35;
-          --surface: #101c18;
-          --surface-alt: #0a1310;
-          --bg: #0b1411;
+          --ink: var(--workspace-text);
+          --muted: var(--workspace-muted);
+          --border: var(--workspace-border);
+          --surface: var(--workspace-surface);
+          --surface-alt: var(--workspace-soft);
+          --bg: var(--workspace-bg);
           
           --chart-grid: #1a2f27;
           --chart-text: #5f756b;
@@ -1982,7 +1792,7 @@ function AuthorDashboard() {
           <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
 
           <div className="ad-user-chip">
-            <div className="ad-avatar">{initials || 'A'}</div>
+            <ProfilePhoto initials={initials || 'A'} />
             <div>
               <div className="ad-user-name">{authorName.split(' ')[0] || 'Author'}</div>
               <span className="ad-user-role">{session.role || 'Author'}</span>
