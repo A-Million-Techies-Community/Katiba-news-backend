@@ -79,3 +79,28 @@ class AuthorDashboardView(APIView):
                 "profile": AuthorProfileSerializer(profile).data,
             }
         )
+
+class ProfilePicturePermission(permissions.BasePermission):
+    def has_permission(self, request, view):
+        from .access import eligible_author, editorial_access
+        return eligible_author(request.user) or editorial_access(request.user)
+
+
+class ProfilePictureView(APIView):
+    """A staff member can update only their own portrait, independently of onboarding."""
+    permission_classes = [ProfilePicturePermission]
+
+    def put(self, request):
+        from .serializers import ProfilePictureSerializer
+        profile, _ = AuthorProfile.objects.get_or_create(user=request.user)
+        serializer = ProfilePictureSerializer(profile, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        request.user._state.fields_cache.pop('author_profile', None)
+        return Response({'profile_picture_url': profile.profile_picture.url})
+
+    def delete(self, request):
+        profile, _ = AuthorProfile.objects.get_or_create(user=request.user)
+        profile.profile_picture.delete(save=True)
+        request.user._state.fields_cache.pop('author_profile', None)
+        return Response({'profile_picture_url': None})

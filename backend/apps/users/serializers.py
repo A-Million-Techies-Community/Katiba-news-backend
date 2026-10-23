@@ -36,6 +36,14 @@ class UserSerializer(serializers.ModelSerializer):
     def get_is_administrator(self, user):
         return administer_newsroom(user)
 
+    profile_picture_url = serializers.SerializerMethodField()
+
+    def get_profile_picture_url(self, user):
+        try:
+            return user.author_profile.profile_picture.url if user.author_profile.profile_picture else None
+        except AuthorProfile.DoesNotExist:
+            return None
+
     profile_complete = serializers.SerializerMethodField()
 
     class Meta:
@@ -47,7 +55,7 @@ class UserSerializer(serializers.ModelSerializer):
             "first_name",
             "last_name",
             "role",
-            "profile_complete", "is_author", "can_review", "is_administrator", "is_active", "workspace_url",
+            "profile_picture_url", "profile_complete", "is_author", "can_review", "is_administrator", "is_active", "workspace_url",
         )
 
     def get_profile_complete(self, user):
@@ -57,13 +65,37 @@ class UserSerializer(serializers.ModelSerializer):
             return False
 
 
+class ProfilePictureSerializer(serializers.ModelSerializer):
+    profile_picture = serializers.ImageField(required=True)
+    class Meta:
+        model = AuthorProfile
+        fields = ('profile_picture',)
+
+    def validate_profile_picture(self, image):
+        if image.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError('Choose a photo smaller than 5 MB.')
+        if image.image.format not in ('JPEG', 'PNG', 'WEBP'):
+            raise serializers.ValidationError('Use a JPEG, PNG, or WebP image.')
+        if image.image.width * image.image.height > 16_000_000:
+            raise serializers.ValidationError('Choose an image with at most 16 million pixels.')
+        extension = {'JPEG': 'jpg', 'PNG': 'png', 'WEBP': 'webp'}[image.image.format]
+        image.name = f'portrait.{extension}'
+        return image
+
+
 class AuthorProfileSerializer(serializers.ModelSerializer):
+    profile_picture_url = serializers.SerializerMethodField()
+
+    def get_profile_picture_url(self, profile):
+        return profile.profile_picture.url if profile.profile_picture else None
+
 
     class Meta:
 
         model = AuthorProfile
 
         fields = (
+            "profile_picture_url",
             # Basic author information
             "professional_title",
             "preferred_byline",

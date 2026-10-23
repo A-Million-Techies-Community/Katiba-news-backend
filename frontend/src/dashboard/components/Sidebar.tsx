@@ -1,7 +1,7 @@
 import { NavigationIcon, navigationLabel } from './NavigationIcon'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import './workspace-controls.css'
-import Brand from '../../brand/Brand'
+import { signOut } from '../../auth/session'
 import { useId, useState } from 'react'
 export type SidebarItem = { id: string; label: string; href?: string; parentId?: string }
 export type SidebarProps = {
@@ -16,8 +16,8 @@ export function Sidebar({ workspace, items, activeItem, onNavigate, disabled }: 
   const groupPrefix = useId()
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   return <aside className="nd-sidebar">
-    <a className="nd-brand" href="/"><Brand /><span>Know. Understand. Engage.</span></a>
-    <div className="nd-section-label">{workspace}</div>
+    <a className="nd-brand" href="/"><span className="workspace-brand-mark">K</span><div><strong>Katiba News</strong><small>{workspace}</small></div></a>
+    <div className="nd-section-label">WORKSPACE</div>
     <nav aria-label="Workspace navigation">
       {items.filter(item => !item.parentId).map(item => {
         const children = items.filter(child => child.parentId === item.id)
@@ -33,6 +33,7 @@ export function Sidebar({ workspace, items, activeItem, onNavigate, disabled }: 
           </div>}
         </div>
       })}
+      <button className="nd-sidebar-logout" type="button" disabled={disabled} onClick={() => void signOut('/workspace')}><NavigationIcon id="logout" /><span>Logout</span></button>
     </nav>
     <div className="nd-sidebar-note"><span>◈</span><h3>Good stories<br />build a better Kenya.</h3><p>Keep informing.<br />Keep inspiring.</p></div>
     <a className="nd-back" href="/">← Back to Katiba News</a>

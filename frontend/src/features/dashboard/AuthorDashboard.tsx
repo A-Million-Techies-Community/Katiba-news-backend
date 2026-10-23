@@ -1,3 +1,5 @@
+import { ProfilePhoto } from '../../dashboard/components/ProfilePhoto'
+import './profile-design.css'
 import { signOut } from '../../auth/session'
 import { NavigationIcon } from '../../dashboard/components/NavigationIcon'
 import { ThemeToggle } from '../../dashboard/components/ThemeToggle'
@@ -987,7 +989,7 @@ function AuthorDashboard() {
         {profileSaveError && <div className="ad-alert ad-alert-error" role="alert">{profileSaveError}</div>}
 
         <div className="ad-profile-hero">
-          <div className="ad-avatar ad-avatar-large">{initials || 'A'}</div>
+          <ProfilePhoto initials={initials || 'A'} large />
           <div className="ad-profile-hero-copy">
             <span className="ad-eyebrow">AUTHOR PROFILE</span>
             <h2>{authorName}</h2>
@@ -1009,7 +1011,7 @@ function AuthorDashboard() {
                     const value = profileDraft[field]; const inputValue = typeof value === 'string' || typeof value === 'number' ? String(value) : ''; const label = PROFILE_LABELS[field] || String(field)
                     const inputType = field === 'email' ? 'email' : field === 'phone_number' ? 'tel' : field === 'portfolio_url' || field === 'linkedin_url' ? 'url' : field === 'years_of_experience' ? 'number' : 'text'
                     return (
-                      <label className="ad-profile-edit-field" key={field}>
+                      <label className={`ad-profile-edit-field${LONG_TEXT_FIELDS.has(field) ? ' wide' : ''}`} key={field}>
                         <span className="ad-profile-edit-label">{label}</span>
                         {LONG_TEXT_FIELDS.has(field) ? (
                           <textarea className="ad-profile-input ad-profile-textarea" value={inputValue} onChange={(event) => updateProfileField(field, event.target.value)} placeholder={`Enter ${label.toLowerCase()}`} rows={4} />
@@ -1038,7 +1040,7 @@ function AuthorDashboard() {
                     {fields.map((field) => {
                       const value = profile[field]; const label = PROFILE_LABELS[field] || String(field)
                       return (
-                        <div className="ad-profile-field" key={field}>
+                        <div className={`ad-profile-field${LONG_TEXT_FIELDS.has(field) ? ' wide' : ''}`} key={field}>
                           <span>{label}</span>
                           {typeof value === 'string' && /^https?:\/\//i.test(value) ? <a href={value} target="_blank" rel="noreferrer">{value}</a> : <p>{displayValue(value)}</p>}
                         </div>
@@ -1506,14 +1508,14 @@ function AuthorDashboard() {
       <style>{`
         .ad-shell {
           /* Light Mode Defaults - Matching Image Reference */
-          --ink: #182b26;
-          --muted: #788780;
+          --ink: var(--workspace-text);
+          --muted: var(--workspace-muted);
           --green: #087f68;
           --green-dark: #066650;
-          --border: #e8ecea;
-          --surface: #fff;
-          --surface-alt: #fff;
-          --bg: #f9fbfb;
+          --border: var(--workspace-border);
+          --surface: var(--workspace-surface);
+          --surface-alt: var(--workspace-soft);
+          --bg: var(--workspace-bg);
           
           /* Fixed Dark Sidebar Theme - Detached from Light/Dark mode */
           --sidebar-bg: #142925;
@@ -1534,12 +1536,12 @@ function AuthorDashboard() {
 
         /* Dark Mode Overrides for Main Content */
         .ad-shell.dark {
-          --ink: #e8efeb;
-          --muted: #8fa59b;
-          --border: #2a3d35;
-          --surface: #101c18;
-          --surface-alt: #0a1310;
-          --bg: #0b1411;
+          --ink: var(--workspace-text);
+          --muted: var(--workspace-muted);
+          --border: var(--workspace-border);
+          --surface: var(--workspace-surface);
+          --surface-alt: var(--workspace-soft);
+          --bg: var(--workspace-bg);
           
           --chart-grid: #1a2f27;
           --chart-text: #5f756b;
@@ -1789,7 +1791,7 @@ function AuthorDashboard() {
           <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
 
           <div className="ad-user-chip">
-            <div className="ad-avatar">{initials || 'A'}</div>
+            <ProfilePhoto initials={initials || 'A'} />
             <div>
               <div className="ad-user-name">{authorName.split(' ')[0] || 'Author'}</div>
               <span className="ad-user-role">{session.role || 'Author'}</span>

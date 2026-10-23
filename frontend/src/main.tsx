@@ -1,6 +1,7 @@
 import { StrictMode, lazy, Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import './dashboard/styles/workspace-palette.css'
 import './features/dashboard/writer-theme.css'
 const App = lazy(() => import('./App.tsx'))
 import NewsDashboardPage from './features/news/pages/NewsDashboardPage'

@@ -8,3 +8,5 @@ __pycache__/
 venv/
 backend/news_uploads/
 node_modules/
+
+backend/media/
