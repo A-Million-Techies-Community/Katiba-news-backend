@@ -15,3 +15,6 @@
 .ad-shell .ad-profile-textarea { min-height:120px; resize:vertical; }
 .ad-shell .ad-profile-edit-actions { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:12px; padding:20px 24px; border:1px solid var(--border); border-radius:14px; background:var(--surface); }
 @media (max-width:768px) { .ad-shell .ad-profile-content .ad-profile-hero { flex-wrap:wrap; padding:22px; } .ad-shell .ad-profile-hero-actions { width:100%; } .ad-shell .ad-profile-section { padding:22px; } .ad-shell .ad-profile-grid { grid-template-columns:1fr; gap:20px; } }
+
+.ad-shell .ad-profile-field { padding:16px; border:1px solid var(--border); border-radius:10px; background:var(--surface-alt); }
+.ad-shell .ad-profile-edit-form { display:grid; gap:0; }

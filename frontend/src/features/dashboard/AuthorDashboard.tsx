@@ -985,6 +985,7 @@ function AuthorDashboard() {
 
     return (
       <div className="ad-profile-content">
+
         {profileSaveMessage && <div className="ad-alert ad-alert-success" role="status">{profileSaveMessage}</div>}
         {profileSaveError && <div className="ad-alert ad-alert-error" role="alert">{profileSaveError}</div>}
 
@@ -1031,18 +1032,18 @@ function AuthorDashboard() {
           </form>
         ) : (
           PROFILE_GROUPS.map((group) => {
-            const fields = group.fields.filter((field) => { const value = profile[field]; return value !== undefined && value !== null && value !== '' })
+            const fields = group.fields
             return (
               <section className="ad-profile-section" key={group.title}>
                 <h3>{group.title}</h3>
                 {fields.length === 0 ? <p className="ad-muted">No saved information in this section.</p> : (
                   <div className="ad-profile-grid">
                     {fields.map((field) => {
-                      const value = profile[field]; const label = PROFILE_LABELS[field] || String(field)
+                      const savedValue = profile[field]; const value = field === 'email' && (savedValue === undefined || savedValue === null || savedValue === '') ? (account?.email || savedValue) : savedValue; const label = PROFILE_LABELS[field] || String(field)
                       return (
                         <div className={`ad-profile-field${LONG_TEXT_FIELDS.has(field) ? ' wide' : ''}`} key={field}>
                           <span>{label}</span>
-                          {typeof value === 'string' && /^https?:\/\//i.test(value) ? <a href={value} target="_blank" rel="noreferrer">{value}</a> : <p>{displayValue(value)}</p>}
+                          {typeof value === 'string' && /^https?:\/\//i.test(value) ? <a href={value} target="_blank" rel="noreferrer">{value}</a> : <p>{value === undefined || value === null || value === '' ? 'Not provided' : displayValue(value)}</p>}
                         </div>
                       )
                     })}
