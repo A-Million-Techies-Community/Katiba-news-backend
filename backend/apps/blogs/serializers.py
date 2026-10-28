@@ -3,6 +3,7 @@ from .models import BlogPost, Comment, Like
 from apps.content.workflow import ContentSerializerMixin
 
 class CommentSerializer(serializers.ModelSerializer):
+    content = serializers.CharField(max_length=5000)
     # Resolves client profile identifiers down to true username strings
     user_username = serializers.CharField(source='user.username', read_only=True)
     post_title = serializers.CharField(source='post.title', read_only=True)

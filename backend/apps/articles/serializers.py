@@ -6,6 +6,13 @@ class ArticleSerializer(ContentSerializerMixin, serializers.ModelSerializer):
     # Extracts the author's real human username text string instead of a row ID number
     author_username = serializers.CharField(source='author.username', read_only=True)
 
+    def validate_featured_image(self, image):
+        if image is None:
+            return image
+        from apps.news.serializers import NewsImageUploadSerializer
+        # Same size, pixel, format and metadata policy as private news images.
+        return NewsImageUploadSerializer().validate_file(image)
+
     class Meta:
         model = Article
         # Explicitly targets base data schema fields needed by frontend requests

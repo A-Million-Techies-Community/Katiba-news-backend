@@ -313,7 +313,7 @@ class RichNewsTests(TestCase):
             self.assertEqual(streamed.status_code, 200)
             self.assertEqual(streamed['Content-Type'], 'image/webp')
             self.assertEqual(streamed['Cache-Control'], 'private, no-store')
-            streamed.close()
+            self.assertTrue(b''.join(streamed.streaming_content))
         for data in (b'not an image', b'<svg xmlns="http://www.w3.org/2000/svg"></svg>', b'x' * (5 * 1024 * 1024 + 1)):
             file = SimpleUploadedFile('fake.png', data, content_type='image/png')
             self.assertEqual(self.client.post('/api/news/images/', {'file': file}, format='multipart').status_code, 400)
@@ -337,7 +337,7 @@ class RichNewsTests(TestCase):
         self.client.force_authenticate(self.editor)
         response = self.client.get(image['url'])
         self.assertEqual(response.status_code, 200)
-        response.close()
+        self.assertTrue(b''.join(response.streaming_content))
         replacement = self.upload(self.editor)
         self.assertEqual(self.client.patch(url, {'content': '<h2>Edited</h2><p>Checked report</p>', 'featured_image': replacement['id'], 'featured_image_alt': 'New image'}, format='json').status_code, 200)
         self.assertEqual(self.client.post(url + 'approve/', {}, format='json').status_code, 200)
@@ -346,7 +346,7 @@ class RichNewsTests(TestCase):
         self.assertEqual(self.client.get(url).json()['featured_image'], replacement['id'])
         response = self.client.get(replacement['url'])
         self.assertEqual(response.status_code, 200)
-        response.close()
+        self.assertTrue(b''.join(response.streaming_content))
 
     def test_images_require_alt_text_and_cannot_be_stolen_or_hotlinked(self):
         """Only authorized uploads can be attached, with descriptive alternatives."""

@@ -131,7 +131,8 @@ class AuthorPasswordChangeView(APIView):
             )
 
         request.user.set_password(new_password)
-        request.user.auth_version += 1
+        from django.db.models import F
+        request.user.auth_version = F('auth_version') + 1
         request.user.save(update_fields=["password", "auth_version"])
 
         return Response({

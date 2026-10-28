@@ -71,6 +71,8 @@ class ContentSerializerMixin:
     def validate(self, attrs):
         attrs = super().validate(attrs)
         user = self.context['request'].user
+        if len(attrs.get('content', '')) > 200_000:
+            raise serializers.ValidationError({'content': 'Limit content to 200,000 characters.'})
         requested = attrs.get('status', self.instance.status if self.instance else 'draft')
         validate_transition(user, self.instance, requested)
         if requested == 'rejected' and not attrs.get('feedback', '').strip():
@@ -96,6 +98,8 @@ class ContentListCreate(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         if not eligible_author(self.request.user):
             raise PermissionDenied('Writer access is required to create content.')
+        if self.serializer_class.Meta.model.objects.filter(author=self.request.user).exclude(status='published').count() >= 200:
+            raise serializers.ValidationError('Limit reached: remove unused drafts before creating more content.')
         serializer.save(author=self.request.user)
 
 

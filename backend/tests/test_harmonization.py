@@ -167,7 +167,7 @@ class WorkspaceIntegrationTests(TestCase):
             self.client.force_authenticate(user=None)
             public = self.client.get(image.api_url)
             self.assertEqual(public.status_code, 200)
-            public.close()
+            self.assertTrue(b''.join(public.streaming_content))
 
     def test_reading_all_published_content_requires_no_account(self):
         for model, kind in [(Article, 'articles'), (BlogPost, 'blogs')]:

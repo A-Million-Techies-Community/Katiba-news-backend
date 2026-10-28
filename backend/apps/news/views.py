@@ -294,6 +294,8 @@ class NewsImageUploadView(APIView):
 
     def post(self, request):
         """Re-encode an upload and return its private image URL for the story editor."""
+        if NewsImage.objects.filter(uploaded_by=request.user, story__isnull=True).count() >= 100:
+            raise serializers.ValidationError('Remove unused uploads before adding more images.')
         serializer = NewsImageUploadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         image = NewsImage(uploaded_by=request.user, content_type='image/webp')

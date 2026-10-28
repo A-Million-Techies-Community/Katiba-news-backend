@@ -100,7 +100,7 @@ katiba-news/
 │   │   ├── services/          # API calls to Django backend
 │   │   └── App.js
 │   └── package.json
-├── .env.example
+├── .env                     # Local configuration (not committed)
 ├── .gitignore
 └── README.md
 \```
@@ -153,15 +153,13 @@ Frontend runs at `http://localhost:3000`.
 
 ## Environment Variables
 
-Create a `.env` file in `backend/` (see `.env.example`):
+The backend loads `backend/.env`; exported variables take precedence. See
+[PostgreSQL connection checks](POSTGRESQL.md) for server and login checks.
 
-\```env
-SECRET_KEY=your-django-secret-key
-DEBUG=True
-DATABASE_URL=postgres://user:password@localhost:5432/katiba_news
-ALLOWED_HOSTS=localhost,127.0.0.1
-CORS_ALLOWED_ORIGINS=http://localhost:3000
-\```
+Create or edit `backend/.env` with your local configuration.
+
+Set `DJANGO_SECRET_KEY` and `DATABASE_URL` in `.env`. Keep this file out of Git.
+The backend uses PostgreSQL through `DATABASE_URL`.
 
 ---
 
@@ -197,7 +195,7 @@ CORS_ALLOWED_ORIGINS=http://localhost:3000
 - Keep components/functions small and reusable.
 - Follow the existing folder structure for new features.
 - Write clear commit messages (e.g. `feat: add newsletter signup form`).
-- Document any new environment variables in `.env.example`.
+- Document any new environment variable names in this README without including secrets.
 - Test locally before opening a PR.
 
 ---

@@ -84,7 +84,18 @@ class ProfilePictureSerializer(serializers.ModelSerializer):
         return image
 
 
+class ProfileURLField(serializers.URLField):
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            data = data.strip()
+            if data and '://' not in data and not data.startswith('//'):
+                data = f'https://{data}'
+        return super().to_internal_value(data)
+
+
 class AuthorProfileSerializer(serializers.ModelSerializer):
+    portfolio_url = ProfileURLField(required=False, allow_blank=True, max_length=200)
+    linkedin_url = ProfileURLField(required=False, allow_blank=True, max_length=200)
     profile_picture_url = serializers.SerializerMethodField()
 
     def get_profile_picture_url(self, profile):

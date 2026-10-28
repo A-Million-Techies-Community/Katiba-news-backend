@@ -3,9 +3,10 @@ __pycache__/
 *.sqlite3
 .env
 .env.*
-!.env.example
 .venv/
 venv/
 backend/news_uploads/
 node_modules/
 backend/media/
+backend/backups/
+backend/staticfiles/

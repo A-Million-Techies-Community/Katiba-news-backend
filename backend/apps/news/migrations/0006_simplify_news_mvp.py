@@ -25,6 +25,11 @@ def retain_mvp_data(apps, schema_editor):
         content_type__model='lead',
         codename__in=['add_lead', 'change_lead', 'delete_lead', 'view_lead', 'review_lead', 'view_assigned_lead'],
     ).delete()
+    # PostgreSQL defers foreign-key checks. Flush pending trigger events from
+    # these data changes before the following ALTER TABLE operations, while
+    # keeping this migration atomic.
+    if schema_editor.connection.vendor == 'postgresql':
+        schema_editor.connection.check_constraints()
 
 
 class Migration(migrations.Migration):

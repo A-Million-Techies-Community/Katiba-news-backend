@@ -3,7 +3,10 @@ from django.urls import include, path
 from django.conf import settings
 from django.conf.urls.static import static
 
+from apps.articles.media import ArticleImageView
+
 urlpatterns = [
+    path('media/articles/<path:name>', ArticleImageView.as_view(), name='article-image'),
     # Master Django Admin Control Room Panel
     path("admin/", admin.site.urls),
     
